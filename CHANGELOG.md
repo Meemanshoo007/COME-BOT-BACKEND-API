@@ -7,8 +7,9 @@
 - Git: Updated `.gitignore` with comprehensive patterns for logs, environment files, build artifacts, and IDE configs to prepare for production deployment.
 - Vercel: Added `vercel.json` for proper routing.
 - Vercel: Updated `index.js` to export the `app` for serverless function compatibility.
-- Documentation: Integrated **Swagger UI**; API documentation is now available at the **root URL (/)**.
-- Documentation: Applied a **Vercel-specific fix** for Swagger UI styles using CDN-linked CSS to prevent white screen issues in serverless environments.
+- Database: Added support for `DATABASE_URL` environment variables to allow seamless connection to cloud databases like **Neon**.
+- Debug: Added a **Public Test Endpoint** at `/api/test-db` to verify database connectivity and read/write permissions (no authentication required for testing).
+- Documentation: Removed Swagger UI and related documentation routes to keep the production build lightweight.
 
 ---
 

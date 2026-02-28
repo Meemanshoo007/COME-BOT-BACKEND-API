@@ -6,8 +6,6 @@ const cors = require("cors");
 const { apiLimiter } = require("./src/middleware/rateLimiter");
 
 // Route imports
-const swaggerUi = require("swagger-ui-express");
-const swaggerSpecs = require("./src/config/swagger");
 const authRoutes = require("./src/routes/auth.routes");
 const configRoutes = require("./src/routes/config.routes");
 const spamRoutes = require("./src/routes/spam.routes");
@@ -19,6 +17,12 @@ const userRoutes = require("./src/routes/user.routes");
 
 const app = express();
 const PORT = process.env.PORT || 3000;
+
+// ─── Simple Request Logger (For Debugging) ────────────────────────────────────
+app.use((req, res, next) => {
+  console.log(`[${new Date().toLocaleTimeString()}] ${req.method} ${req.url}`);
+  next();
+});
 
 // ─── Security Middleware ───────────────────────────────────────────────────────
 app.use(helmet());
@@ -58,28 +62,6 @@ app.get("/health", (req, res) =>
   res.status(200).json({ status: "ok", timestamp: new Date().toISOString() }),
 );
 
-// ─── API Documentation (Vercel Serverless Fix) ────────────────────────────────
-const CSS_URL = "https://cdn.jsdelivr.net/npm/swagger-ui-dist@4.15.5/swagger-ui.css";
-const JS_URLS = [
-  "https://cdn.jsdelivr.net/npm/swagger-ui-dist@4.15.5/swagger-ui-bundle.js",
-  "https://cdn.jsdelivr.net/npm/swagger-ui-dist@4.15.5/swagger-ui-standalone-preset.js"
-];
-
-app.use(
-  "/",
-  swaggerUi.serve,
-  swaggerUi.setup(swaggerSpecs, {
-    customCss: `
-      .swagger-ui .topbar { display: none }
-      .scheme-container { background: #0f172a !important }
-      .swagger-ui { background: #0f172a !important; color: #f8fafc !important }
-    `,
-    customCssUrl: CSS_URL,
-    customJs: JS_URLS,
-    customSiteTitle: "COME Admin API Docs",
-  }),
-);
-
 // ─── API Routes ───────────────────────────────────────────────────────────────
 app.use("/api/auth", authRoutes);
 app.use("/api/config", configRoutes);
@@ -92,6 +74,7 @@ app.use("/api/users", userRoutes);
 
 // ─── 404 Handler ─────────────────────────────────────────────────────────────
 app.use((req, res) => {
+  console.log(`[404] Route not found: ${req.method} ${req.url}`);
   res.status(404).json({ success: false, message: "Route not found." });
 });
 
