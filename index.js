@@ -34,23 +34,26 @@ app.use(helmet());
 app.use(
   cors({
     origin: (origin, callback) => {
+      // Allow all origins in non-production for easier debugging
+      if (process.env.NODE_ENV !== "production" || !origin) {
+        return callback(null, true);
+      }
+
       const allowedOrigins = [
         process.env.CORS_ORIGIN,
-        "http://localhost:5000",
-        "http://localhost:3000",
-        "http://localhost:8080",
-        "http://localhost:64587",
+        "https://come-bot-admin.web.app", // Example Firebase hosting
       ].filter(Boolean);
 
-      // Allow requests with no origin (e.g., mobile apps, Postman in dev)
-      if (!origin || allowedOrigins.includes(origin)) {
+      if (allowedOrigins.includes(origin) || origin.startsWith("http://localhost:")) {
         callback(null, true);
       } else {
+        console.log(`[CORS Blocked] Origin: ${origin}`);
         callback(new Error(`CORS policy: origin ${origin} not allowed.`));
       }
     },
-    methods: ["GET", "POST", "PATCH", "DELETE"],
-    allowedHeaders: ["Content-Type", "Authorization"],
+    methods: ["GET", "POST", "PATCH", "DELETE", "OPTIONS"],
+    allowedHeaders: ["Content-Type", "Authorization", "Accept"],
+    credentials: true,
   }),
 );
 
