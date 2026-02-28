@@ -41,10 +41,14 @@ app.use(
 
       const allowedOrigins = [
         process.env.CORS_ORIGIN,
+        "https://vbfb-d6161.web.app/",
         "https://come-bot-admin.web.app", // Example Firebase hosting
       ].filter(Boolean);
 
-      if (allowedOrigins.includes(origin) || origin.startsWith("http://localhost:")) {
+      if (
+        allowedOrigins.includes(origin) ||
+        origin.startsWith("http://localhost:")
+      ) {
         callback(null, true);
       } else {
         console.log(`[CORS Blocked] Origin: ${origin}`);
