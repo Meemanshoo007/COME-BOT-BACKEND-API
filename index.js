@@ -7,6 +7,7 @@ const { apiLimiter } = require("./src/middleware/rateLimiter");
 
 // Route imports
 const authRoutes = require("./src/routes/auth.routes");
+const setupRoutes = require("./src/routes/setup.routes");
 const configRoutes = require("./src/routes/config.routes");
 const spamRoutes = require("./src/routes/spam.routes");
 const interestRoutes = require("./src/routes/interest.routes");
@@ -64,6 +65,9 @@ app.use("/api", apiLimiter);
 app.get("/health", (req, res) =>
   res.status(200).json({ status: "ok", timestamp: new Date().toISOString() }),
 );
+
+// ─── Database Setup (Run once after deployment) ──────────────────────────────
+app.use("/api/setup-db", setupRoutes);
 
 // ─── API Routes ───────────────────────────────────────────────────────────────
 app.use("/api/auth", authRoutes);
