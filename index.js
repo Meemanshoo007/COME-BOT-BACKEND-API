@@ -41,8 +41,8 @@ app.use(
 
       const allowedOrigins = [
         process.env.CORS_ORIGIN,
-        "https://vbfb-d6161.web.app/",
-        "https://come-bot-admin.web.app", // Example Firebase hosting
+        "https://vbfb-d6161.web.app",
+        "https://come-bot-admin.web.app",
       ].filter(Boolean);
 
       if (
