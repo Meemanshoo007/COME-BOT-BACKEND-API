@@ -58,16 +58,24 @@ app.get("/health", (req, res) =>
   res.status(200).json({ status: "ok", timestamp: new Date().toISOString() }),
 );
 
-// ─── API Documentation (Vercel Fix: Use CDN for assets) ───────────────────────
-const CSS_URL =
-  "https://cdnjs.cloudflare.com/ajax/libs/swagger-ui/4.15.5/swagger-ui.min.css";
+// ─── API Documentation (Vercel Serverless Fix) ────────────────────────────────
+const CSS_URL = "https://cdn.jsdelivr.net/npm/swagger-ui-dist@4.15.5/swagger-ui.css";
+const JS_URLS = [
+  "https://cdn.jsdelivr.net/npm/swagger-ui-dist@4.15.5/swagger-ui-bundle.js",
+  "https://cdn.jsdelivr.net/npm/swagger-ui-dist@4.15.5/swagger-ui-standalone-preset.js"
+];
+
 app.use(
   "/",
   swaggerUi.serve,
   swaggerUi.setup(swaggerSpecs, {
-    customCss:
-      ".swagger-ui .topbar { display: none } .scheme-container { background: #0f172a }",
+    customCss: `
+      .swagger-ui .topbar { display: none }
+      .scheme-container { background: #0f172a !important }
+      .swagger-ui { background: #0f172a !important; color: #f8fafc !important }
+    `,
     customCssUrl: CSS_URL,
+    customJs: JS_URLS,
     customSiteTitle: "COME Admin API Docs",
   }),
 );
