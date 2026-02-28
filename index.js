@@ -6,6 +6,8 @@ const cors = require("cors");
 const { apiLimiter } = require("./src/middleware/rateLimiter");
 
 // Route imports
+const swaggerUi = require("swagger-ui-express");
+const swaggerSpecs = require("./src/config/swagger");
 const authRoutes = require("./src/routes/auth.routes");
 const configRoutes = require("./src/routes/config.routes");
 const spamRoutes = require("./src/routes/spam.routes");
@@ -55,6 +57,9 @@ app.use("/api", apiLimiter);
 app.get("/health", (req, res) =>
   res.status(200).json({ status: "ok", timestamp: new Date().toISOString() }),
 );
+
+// ─── API Documentation ────────────────────────────────────────────────────────
+app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(swaggerSpecs));
 
 // ─── API Routes ───────────────────────────────────────────────────────────────
 app.use("/api/auth", authRoutes);

@@ -7,6 +7,8 @@
 - Git: Updated `.gitignore` with comprehensive patterns for logs, environment files, build artifacts, and IDE configs to prepare for production deployment.
 - Vercel: Added `vercel.json` for proper routing.
 - Vercel: Updated `index.js` to export the `app` for serverless function compatibility.
+- Documentation: Integrated **Swagger UI**; API documentation is now available at `/api-docs`.
+- Documentation: Added initial Swagger documentation for the **Admin Login** endpoint.
 
 ---
 
