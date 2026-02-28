@@ -4,21 +4,13 @@ const pool = require("../config/db");
 const router = express.Router();
 
 /**
- * @swagger
- * /test-db:
- *   get:
- *     summary: Initialize Database Schema
- *     description: Creates all required tables for the project if they do not exist.
- *     tags: [Setup]
- *     responses:
- *       200:
- *         description: Database setup successful
+ * Public Endpoint to initialize the database schema.
+ * Creates all 9 project tables and seeds the default config.
  */
 router.get("/", async (req, res) => {
     try {
-        console.log("[Setup] Initializing Database Schema...");
+        console.log("[DB Setup] Starting database initialization...");
 
-        // Create all project tables
         await pool.query(`
       -- 1. Profiles
       CREATE TABLE IF NOT EXISTS telegram_profile (
@@ -116,17 +108,19 @@ router.get("/", async (req, res) => {
       );
     `);
 
-        // Seed Default Config
+        // Seed default bot configuration
         await pool.query(`
       INSERT INTO config (id, spam_limit, mute_duration_minutes, maintenance_mode, maintenance_message)
       VALUES (1, 3, 1, false, '🚧 The bot is currently under maintenance. Please try again later. 🚧')
       ON CONFLICT (id) DO NOTHING
     `);
 
+        console.log("✅ [DB Setup] Database schema initialized successfully!");
+
         res.json({
             success: true,
-            message: "🚀 Database schema initialized successfully!",
-            tables_verified: [
+            message: "🚀 Neon Database INITIALIZED! All tables created/verified.",
+            tables: [
                 "telegram_profile",
                 "admin",
                 "config",
@@ -139,7 +133,7 @@ router.get("/", async (req, res) => {
             ],
         });
     } catch (err) {
-        console.error("[Setup Error]", err.message);
+        console.error("❌ [DB Setup Error]", err.message);
         res.status(500).json({
             success: false,
             message: "❌ Database initialization failed.",
