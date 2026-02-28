@@ -11,15 +11,12 @@ const login = async (req, res) => {
 
   try {
     const result = await loginAdmin(value.telegram_id, value.secret);
-    console.log(!result);
 
     if (!result) {
-      return res
-        .status(401)
-        .json({
-          success: false,
-          message: "Invalid credentials or unauthorized admin.",
-        });
+      return res.status(401).json({
+        success: false,
+        message: "Invalid credentials or unauthorized admin.",
+      });
     }
     return res.status(200).json({ success: true, token: result.token });
   } catch (err) {

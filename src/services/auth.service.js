@@ -12,8 +12,9 @@ const pool = require("../config/db");
  */
 const loginAdmin = async (telegramId, secret) => {
   // 1. Check ADMIN_SECRET
-  console.log(secret);
-  console.log(process.env.ADMIN_SECRET);
+  console.log("Received Telegram ID:", telegramId);
+  console.log("Received secret:", secret);
+  console.log("Expected secret:", process.env.ADMIN_SECRET);
   if (secret !== process.env.ADMIN_SECRET) {
     return null;
   }
