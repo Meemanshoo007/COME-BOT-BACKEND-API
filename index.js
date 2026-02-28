@@ -58,8 +58,19 @@ app.get("/health", (req, res) =>
   res.status(200).json({ status: "ok", timestamp: new Date().toISOString() }),
 );
 
-// ─── API Documentation ────────────────────────────────────────────────────────
-app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(swaggerSpecs));
+// ─── API Documentation (Vercel Fix: Use CDN for assets) ───────────────────────
+const CSS_URL =
+  "https://cdnjs.cloudflare.com/ajax/libs/swagger-ui/4.15.5/swagger-ui.min.css";
+app.use(
+  "/",
+  swaggerUi.serve,
+  swaggerUi.setup(swaggerSpecs, {
+    customCss:
+      ".swagger-ui .topbar { display: none } .scheme-container { background: #0f172a }",
+    customCssUrl: CSS_URL,
+    customSiteTitle: "COME Admin API Docs",
+  }),
+);
 
 // ─── API Routes ───────────────────────────────────────────────────────────────
 app.use("/api/auth", authRoutes);
