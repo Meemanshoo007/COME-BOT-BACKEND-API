@@ -78,7 +78,11 @@ app.use((err, req, res, next) => {
 });
 
 // ─── Start Server ─────────────────────────────────────────────────────────────
-app.listen(PORT, () => {
-  console.log(`✅ COME Backend running on port ${PORT}`);
-  console.log(`   Environment: ${process.env.NODE_ENV || "development"}`);
-});
+if (process.env.NODE_ENV !== "production") {
+  app.listen(PORT, () => {
+    console.log(`✅ COME Backend running on port ${PORT}`);
+    console.log(`   Environment: ${process.env.NODE_ENV || "development"}`);
+  });
+}
+
+module.exports = app;

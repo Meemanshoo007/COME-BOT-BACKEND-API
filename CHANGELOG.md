@@ -5,6 +5,8 @@
 ## [v1.0.1] — 2026-02-28
 ### Changed
 - Git: Updated `.gitignore` with comprehensive patterns for logs, environment files, build artifacts, and IDE configs to prepare for production deployment.
+- Vercel: Added `vercel.json` for proper routing.
+- Vercel: Updated `index.js` to export the `app` for serverless function compatibility.
 
 ---
 
