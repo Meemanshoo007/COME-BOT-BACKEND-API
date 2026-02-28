@@ -18,6 +18,9 @@ const userRoutes = require("./src/routes/user.routes");
 const app = express();
 const PORT = process.env.PORT || 3000;
 
+// Trust Vercel's proxy for rate limiting
+app.set("trust proxy", 1);
+
 // ─── Simple Request Logger (For Debugging) ────────────────────────────────────
 app.use((req, res, next) => {
   console.log(`[${new Date().toLocaleTimeString()}] ${req.method} ${req.url}`);

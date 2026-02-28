@@ -10,6 +10,7 @@
 - Database: Added support for `DATABASE_URL` environment variables to allow seamless connection to cloud databases like **Neon**.
 - Debug: Added a **Public Test Endpoint** at `/api/test-db` to verify database connectivity and read/write permissions (no authentication required for testing).
 - Documentation: Removed Swagger UI and related documentation routes to keep the production build lightweight.
+- Vercel: Added `app.set("trust proxy", 1)` to fix rate-limiting issues behind Vercel's proxy.
 
 ---
 

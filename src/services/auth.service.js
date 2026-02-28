@@ -12,7 +12,8 @@ const pool = require("../config/db");
  */
 const loginAdmin = async (telegramId, secret) => {
   // 1. Check ADMIN_SECRET
-  console.log(secret !== process.env.ADMIN_SECRET);
+  console.log(secret);
+  console.log(process.env.ADMIN_SECRET);
   if (secret !== process.env.ADMIN_SECRET) {
     return null;
   }
