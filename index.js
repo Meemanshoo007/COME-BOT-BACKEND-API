@@ -58,28 +58,6 @@ app.get("/health", (req, res) =>
   res.status(200).json({ status: "ok", timestamp: new Date().toISOString() }),
 );
 
-// ─── API Documentation (Vercel Serverless Fix) ────────────────────────────────
-const CSS_URL = "https://cdn.jsdelivr.net/npm/swagger-ui-dist@4.15.5/swagger-ui.css";
-const JS_URLS = [
-  "https://cdn.jsdelivr.net/npm/swagger-ui-dist@4.15.5/swagger-ui-bundle.js",
-  "https://cdn.jsdelivr.net/npm/swagger-ui-dist@4.15.5/swagger-ui-standalone-preset.js"
-];
-
-app.use(
-  "/",
-  swaggerUi.serve,
-  swaggerUi.setup(swaggerSpecs, {
-    customCss: `
-      .swagger-ui .topbar { display: none }
-      .scheme-container { background: #0f172a !important }
-      .swagger-ui { background: #0f172a !important; color: #f8fafc !important }
-    `,
-    customCssUrl: CSS_URL,
-    customJs: JS_URLS,
-    customSiteTitle: "COME Admin API Docs",
-  }),
-);
-
 // ─── API Routes ───────────────────────────────────────────────────────────────
 app.use("/api/auth", authRoutes);
 app.use("/api/config", configRoutes);
@@ -89,6 +67,20 @@ app.use("/api/analytics", analyticsRoutes);
 app.use("/api/broadcast", broadcastRoutes);
 app.use("/api/groups", groupRoutes);
 app.use("/api/users", userRoutes);
+
+// ─── API Documentation (Vercel Fixed) ────────────────────────────────────────
+const swaggerOptions = {
+  customCssUrl: "https://cdnjs.cloudflare.com/ajax/libs/swagger-ui/4.15.5/swagger-ui.min.css",
+  customJs: [
+    "https://cdnjs.cloudflare.com/ajax/libs/swagger-ui/4.15.5/swagger-ui-bundle.js",
+    "https://cdnjs.cloudflare.com/ajax/libs/swagger-ui/4.15.5/swagger-ui-standalone-preset.js",
+  ],
+  customSiteTitle: "COME Admin API Docs",
+};
+
+// Serve swagger UI at root
+app.use("/", swaggerUi.serve);
+app.get("/", swaggerUi.setup(swaggerSpecs, swaggerOptions));
 
 // ─── 404 Handler ─────────────────────────────────────────────────────────────
 app.use((req, res) => {
@@ -105,7 +97,6 @@ app.use((err, req, res, next) => {
 if (process.env.NODE_ENV !== "production") {
   app.listen(PORT, () => {
     console.log(`✅ COME Backend running on port ${PORT}`);
-    console.log(`   Environment: ${process.env.NODE_ENV || "development"}`);
   });
 }
 
