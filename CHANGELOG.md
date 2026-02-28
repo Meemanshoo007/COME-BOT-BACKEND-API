@@ -1,0 +1,25 @@
+# COME Backend — Changelog
+
+---
+
+## [v1.0.1] — 2026-02-28
+### Changed
+- Git: Updated `.gitignore` with comprehensive patterns for logs, environment files, build artifacts, and IDE configs to prepare for production deployment.
+
+---
+
+## [v1.0.0] — 2026-02-26
+### Added
+- Initial project setup for Admin REST API.
+- PostgreSQL connection pool using node-postgres.
+- JWT-based authentication system for admin sessions.
+- Security middleware: Helmet, CORS, and Express-Rate-Limit.
+- Request validation using Joi schemas.
+- API Endpoints:
+    - `POST /api/auth/login`: Admin authentication.
+    - `GET/PATCH /api/config`: Bot settings management.
+    - `GET/POST/DELETE /api/spam`: Spam keyword management.
+    - `GET/POST/PATCH/DELETE /api/interests`: Community interests management.
+    - `GET /api/analytics`: Overview and interest statistics.
+    - `GET/POST/DELETE /api/broadcast`: Push message scheduling and history.
+- Health check endpoint `/health`.
