@@ -32,7 +32,7 @@ const pollCreateSchema = Joi.object({
     is_anonymous: Joi.boolean().default(true),
     allows_multiple_answers: Joi.boolean().default(false),
     is_quiz: Joi.boolean().default(false),
-    correct_option_index: Joi.number().integer().min(0).max(9).when('is_quiz', { is: true, then: Joi.required() }),
+    correct_option_index: Joi.number().integer().min(0).max(9).allow(null).when('is_quiz', { is: true, then: Joi.required() }),
     explanation: Joi.string().max(200).allow(null, ''),
     interest_ids: Joi.array().items(Joi.number().integer().positive()).allow(null),
     scheduled_at: Joi.string().isoDate().required(),

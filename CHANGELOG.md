@@ -9,7 +9,7 @@
   - `POST /api/polls`: Schedule a new poll globally or by interest. Now returns the **full poll object** (including option IDs) to prevent UI parsing crashes.
   - `GET /api/polls/:id/analytics`: Retrieve vote counts for a specific poll.
   - `DELETE /api/polls/:id`: Cancel scheduled polls.
-  - Validation: Updated `pollCreateSchema` to make `interest_ids` optional, defaulting to global group-wide delivery.
+  - Validation: Updated `pollCreateSchema` to make `interest_ids` and `correct_option_index` optional/nullable, fixing "must be a number" errors when not in Quiz Mode.
 - Routes: Mounted `/api/polls` in `index.js`.
 - Services: Created `poll.service.js` to handle complex multi-table inserts (poll + options) within database transactions.
 
