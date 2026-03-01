@@ -63,14 +63,22 @@ const createPollRecord = async (pollData) => {
         }
 
         await client.query('COMMIT');
-        return { id: pollId, ...pollData };
+
+        // Return full poll with options
+        const result = await client.query(`
+            SELECT p.*, 
+            (SELECT json_agg(o.*) FROM poll_option o WHERE o.poll_id = p.id) as options
+            FROM poll p WHERE p.id = $1
+        `, [pollId]);
+
+        return result.rows[0];
     } catch (e) {
         await client.query('ROLLBACK');
         throw e;
     } finally {
         client.release();
     }
-};
+}
 
 const getPollAnalytics = async (pollId) => {
     const pollResult = await pool.query('SELECT * FROM poll WHERE id = $1', [pollId]);

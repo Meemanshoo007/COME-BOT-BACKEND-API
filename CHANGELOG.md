@@ -6,7 +6,7 @@
 ### Added
 - **Poll Management API**:
   - `GET /api/polls`: List all created polls with their options.
-  - `POST /api/polls`: Schedule a new poll globally or (optionally) by interest.
+  - `POST /api/polls`: Schedule a new poll globally or by interest. Now returns the **full poll object** (including option IDs) to prevent UI parsing crashes.
   - `GET /api/polls/:id/analytics`: Retrieve vote counts for a specific poll.
   - `DELETE /api/polls/:id`: Cancel scheduled polls.
   - Validation: Updated `pollCreateSchema` to make `interest_ids` optional, defaulting to global group-wide delivery.
