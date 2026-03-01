@@ -84,11 +84,13 @@ const getPollAnalytics = async (pollId) => {
     const pollResult = await pool.query('SELECT * FROM poll WHERE id = $1', [pollId]);
     if (pollResult.rows.length === 0) return null;
 
-    const optionsResult = await pool.query('SELECT * FROM poll_option WHERE poll_id = $1', [pollId]);
+    const optionsResult = await pool.query('SELECT * FROM poll_option WHERE poll_id = $1 ORDER BY id ASC', [pollId]);
+    const votersResult = await pool.query('SELECT * FROM poll_vote WHERE poll_id = $1 ORDER BY created_at DESC', [pollId]);
 
     return {
         ...pollResult.rows[0],
-        options: optionsResult.rows
+        options: optionsResult.rows,
+        voters: votersResult.rows
     };
 };
 

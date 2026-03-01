@@ -6,8 +6,8 @@
 ### Added
 - **Poll Management API**:
   - `GET /api/polls`: List all created polls with their options.
-  - `POST /api/polls`: Schedule a new poll globally or by interest. Now returns the **full poll object** (including option IDs) to prevent UI parsing crashes.
-  - `GET /api/polls/:id/analytics`: Retrieve vote counts for a specific poll.
+  - `POST /api/polls`: Schedule a new poll globally or by interest. Now returns the full poll object.
+  - `GET /api/polls/:id/analytics`: Retrieve vote counts and **voter name lists** (for non-anonymous polls).
   - `DELETE /api/polls/:id`: Cancel scheduled polls.
   - Validation: Updated `pollCreateSchema` to make `interest_ids` and `correct_option_index` optional/nullable, fixing "must be a number" errors when not in Quiz Mode.
 - Routes: Mounted `/api/polls` in `index.js`.
