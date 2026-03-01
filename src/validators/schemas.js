@@ -26,10 +26,23 @@ const broadcastCreateSchema = Joi.object({
     scheduled_time: Joi.string().isoDate().required(),
 });
 
+const pollCreateSchema = Joi.object({
+    question: Joi.string().min(1).max(255).required(),
+    options: Joi.array().items(Joi.string().min(1).max(100)).min(2).max(10).required(),
+    is_anonymous: Joi.boolean().default(true),
+    allows_multiple_answers: Joi.boolean().default(false),
+    is_quiz: Joi.boolean().default(false),
+    correct_option_index: Joi.number().integer().min(0).max(9).when('is_quiz', { is: true, then: Joi.required() }),
+    explanation: Joi.string().max(200).allow(null, ''),
+    interest_ids: Joi.array().items(Joi.number().integer().positive()).allow(null),
+    scheduled_at: Joi.string().isoDate().required(),
+});
+
 module.exports = {
     loginSchema,
     configUpdateSchema,
     spamAddSchema,
     interestAddSchema,
     broadcastCreateSchema,
+    pollCreateSchema,
 };

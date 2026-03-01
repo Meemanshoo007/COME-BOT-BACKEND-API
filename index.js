@@ -13,6 +13,7 @@ const spamRoutes = require("./src/routes/spam.routes");
 const interestRoutes = require("./src/routes/interest.routes");
 const analyticsRoutes = require("./src/routes/analytics.routes");
 const broadcastRoutes = require("./src/routes/broadcast.routes");
+const pollRoutes = require("./src/routes/poll.routes");
 const groupRoutes = require("./src/routes/group.routes");
 const userRoutes = require("./src/routes/user.routes");
 
@@ -83,6 +84,7 @@ app.use("/api/spam", spamRoutes);
 app.use("/api/interests", interestRoutes);
 app.use("/api/analytics", analyticsRoutes);
 app.use("/api/broadcast", broadcastRoutes);
+app.use("/api/polls", pollRoutes);
 app.use("/api/groups", groupRoutes);
 app.use("/api/users", userRoutes);
 

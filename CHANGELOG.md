@@ -2,6 +2,19 @@
 
 ---
 
+## [v1.1.0] — 2026-03-01
+### Added
+- **Poll Management API**:
+  - `GET /api/polls`: List all created polls with their options.
+  - `POST /api/polls`: Schedule a new poll globally or (optionally) by interest.
+  - `GET /api/polls/:id/analytics`: Retrieve vote counts for a specific poll.
+  - `DELETE /api/polls/:id`: Cancel scheduled polls.
+  - Validation: Updated `pollCreateSchema` to make `interest_ids` optional, defaulting to global group-wide delivery.
+- Routes: Mounted `/api/polls` in `index.js`.
+- Services: Created `poll.service.js` to handle complex multi-table inserts (poll + options) within database transactions.
+
+---
+
 ## [v1.0.1] — 2026-02-28
 ### Changed
 - Git: Updated `.gitignore` with comprehensive patterns for logs, environment files, build artifacts, and IDE configs to prepare for production deployment.
