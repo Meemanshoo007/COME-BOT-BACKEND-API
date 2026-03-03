@@ -23,6 +23,7 @@ const patchConfig = async (req, res) => {
             muteDurationMinutes: value.mute_duration_minutes,
             maintenanceMode: value.maintenance_mode,
             maintenanceMessage: value.maintenance_message,
+            isKilled: value.is_killed,
         });
         return res.status(200).json({ success: true, data: updated });
     } catch (err) {

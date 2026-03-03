@@ -5,10 +5,20 @@ const pool = require('../config/db');
  * Creates a default row if not present.
  */
 const getBotConfig = async () => {
+    // Auto-migration: Ensure is_killed column exists
+    try {
+        await pool.query(`
+            ALTER TABLE config 
+            ADD COLUMN IF NOT EXISTS is_killed BOOLEAN DEFAULT false
+        `);
+    } catch (err) {
+        console.warn('[Config Service] Column "is_killed" check/add failed (may already exist):', err.message);
+    }
+
     // Ensure default row exists
     await pool.query(`
-    INSERT INTO config (id, spam_limit, mute_duration_minutes, maintenance_mode, maintenance_message)
-    VALUES (1, 3, 1, false, '🚧 The bot is currently under maintenance. Please try again later. 🚧')
+    INSERT INTO config (id, spam_limit, mute_duration_minutes, maintenance_mode, maintenance_message, is_killed)
+    VALUES (1, 3, 1, false, '🚧 The bot is currently under maintenance. Please try again later. 🚧', false)
     ON CONFLICT (id) DO NOTHING
   `);
 
@@ -21,7 +31,7 @@ const getBotConfig = async () => {
  * Only updates fields that are passed (non-undefined).
  */
 const updateBotConfig = async (fields) => {
-    const { spamLimit, muteDurationMinutes, maintenanceMode, maintenanceMessage } = fields;
+    const { spamLimit, muteDurationMinutes, maintenanceMode, maintenanceMessage, isKilled } = fields;
 
     const updates = [];
     const values = [];
@@ -42,6 +52,10 @@ const updateBotConfig = async (fields) => {
     if (maintenanceMessage !== undefined) {
         updates.push(`maintenance_message = $${idx++}`);
         values.push(maintenanceMessage);
+    }
+    if (isKilled !== undefined) {
+        updates.push(`is_killed = $${idx++}`);
+        values.push(isKilled);
     }
 
     if (updates.length === 0) return await getBotConfig();

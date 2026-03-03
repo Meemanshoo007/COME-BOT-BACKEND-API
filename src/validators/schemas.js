@@ -10,6 +10,7 @@ const configUpdateSchema = Joi.object({
     mute_duration_minutes: Joi.number().integer().min(1).max(1440),
     maintenance_mode: Joi.boolean(),
     maintenance_message: Joi.string().min(1).max(1000),
+    is_killed: Joi.boolean(),
 }).min(1); // At least one field required
 
 const spamAddSchema = Joi.object({
