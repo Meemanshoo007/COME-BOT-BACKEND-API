@@ -16,6 +16,7 @@ const broadcastRoutes = require("./src/routes/broadcast.routes");
 const pollRoutes = require("./src/routes/poll.routes");
 const groupRoutes = require("./src/routes/group.routes");
 const userRoutes = require("./src/routes/user.routes");
+const { version } = require("joi");
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -70,9 +71,28 @@ app.use(express.urlencoded({ extended: false }));
 app.use("/api", apiLimiter);
 
 // ─── Health Check ─────────────────────────────────────────────────────────────
-app.get("/health", (req, res) =>
-  res.status(200).json({ status: "ok", timestamp: new Date().toISOString() }),
-);
+app.get("/health", async (req, res) => {
+  try {
+    // const pool = require("./src/config/db");
+    // const result = await pool.query(`
+    //   SELECT column_name, data_type, is_nullable
+    //   FROM information_schema.columns
+    //   WHERE table_name = 'admin'
+    //   ORDER BY ordinal_position
+    // `);
+    res.status(200).json({
+      status: "ok",
+      version: "1.0.0",
+      timestamp: new Date().toISOString(),
+      // admin_table_columns: result.rows,
+    });
+  } catch (err) {
+    res.status(500).json({
+      status: "error",
+      timestamp: new Date().toISOString(),
+    });
+  }
+});
 
 // ─── Database Setup (Run once after deployment) ──────────────────────────────
 app.use("/api/setup-db", setupRoutes);

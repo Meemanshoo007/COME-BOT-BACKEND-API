@@ -4,25 +4,22 @@ const pool = require("../config/db");
 /**
  * Validates admin credentials.
  * Admin must exist in the `admin` table with status=true
- * AND provide the correct ADMIN_SECRET from environment.
+ * AND provide the correct password from the database.
  *
- * @param {number} telegramId - The admin's Telegram ID
- * @param {string} secret - The shared admin secret
+ * @param {number} id - The admin's ID
+ * @param {string} password - The admin's password
  * @returns {{ token: string } | null}
  */
-const loginAdmin = async (telegramId, secret) => {
+const loginAdmin = async (id, password) => {
   // 1. Check ADMIN_SECRET
-  console.log("Received Telegram ID:", telegramId);
-  console.log("Received secret:", secret);
-  console.log("Expected secret:", process.env.ADMIN_SECRET);
-  if (secret !== process.env.ADMIN_SECRET) {
-    return null;
-  }
+  console.log("Received ID:", id);
+  console.log("Received password:", password);
+
 
   // 2. Check admin table
   const result = await pool.query(
-    "SELECT id, status FROM admin WHERE id = $1",
-    [telegramId],
+    "SELECT id, status, password FROM admin WHERE id = $1",
+    [id],
   );
 
   if (result.rows.length === 0) {
@@ -34,8 +31,13 @@ const loginAdmin = async (telegramId, secret) => {
     return null; // Admin is deactivated
   }
 
+  console.log("Expected password:", admin.password);
+  if (password !== admin.password) {
+    return null;
+  }
+
   // 3. Sign JWT
-  const token = jwt.sign({ telegram_id: telegramId }, process.env.JWT_SECRET, {
+  const token = jwt.sign({ id: id }, process.env.JWT_SECRET, {
     expiresIn: "8h",
   });
 

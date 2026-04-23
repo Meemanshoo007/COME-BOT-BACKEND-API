@@ -10,7 +10,7 @@ const login = async (req, res) => {
   }
 
   try {
-    const result = await loginAdmin(value.telegram_id, value.secret);
+    const result = await loginAdmin(value.id, value.password);
 
     if (!result) {
       return res.status(401).json({

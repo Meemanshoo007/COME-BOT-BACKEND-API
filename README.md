@@ -1,3 +1,5 @@
+git status
+
 git add .
 
 git commit -m "Your commit message"

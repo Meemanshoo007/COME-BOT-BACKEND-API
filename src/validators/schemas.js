@@ -1,8 +1,12 @@
 const Joi = require('joi');
 
 const loginSchema = Joi.object({
-    telegram_id: Joi.number().integer().positive().required(),
-    secret: Joi.string().min(1).required(),
+  id: Joi.number().integer().positive().required(),
+
+  password: Joi.string()
+    .min(6)               // minimum length (adjust if needed)
+    .max(128)             // prevent very large inputs
+    .required()
 });
 
 const configUpdateSchema = Joi.object({
