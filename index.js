@@ -98,15 +98,15 @@ app.get("/health", async (req, res) => {
 app.use("/api/setup-db", setupRoutes);
 
 // ─── API Routes ───────────────────────────────────────────────────────────────
-app.use("/api/auth", authRoutes);
-app.use("/api/config", configRoutes);
-app.use("/api/spam", spamRoutes);
-app.use("/api/interests", interestRoutes);
-app.use("/api/analytics", analyticsRoutes);
-app.use("/api/broadcast", broadcastRoutes);
-app.use("/api/polls", pollRoutes);
-app.use("/api/groups", groupRoutes);
-app.use("/api/users", userRoutes);
+app.use("/auth", authRoutes);
+app.use("/config", configRoutes);
+app.use("/spam", spamRoutes);
+app.use("/interests", interestRoutes);
+app.use("/analytics", analyticsRoutes);
+app.use("/broadcast", broadcastRoutes);
+app.use("/polls", pollRoutes);
+app.use("/groups", groupRoutes);
+app.use("/users", userRoutes);
 
 // ─── 404 Handler ─────────────────────────────────────────────────────────────
 app.use((req, res) => {
