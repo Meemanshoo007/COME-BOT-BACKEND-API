@@ -24,6 +24,8 @@ const getAllUsers = async ({ search = '', interestIds = [], page = 1, limit = 20
             p.xp,
             p.level,
             p.created_at,
+            p.updated_at,
+            p.updated_by,
             COUNT(DISTINCT ui.id) FILTER (WHERE ui.status = true) AS interests_count
         FROM telegram_profile p
         LEFT JOIN user_interests ui ON ui.telegram_id = p.telegram_id
@@ -33,7 +35,7 @@ const getAllUsers = async ({ search = '', interestIds = [], page = 1, limit = 20
             p.telegram_id::TEXT LIKE $1 OR 
             p.come_uid::TEXT LIKE $1
         GROUP BY p.id
-        ORDER BY p.xp DESC
+        ORDER BY p.updated_at DESC
         LIMIT $2 OFFSET $3
     `, [searchParam, limit, offset]);
 
@@ -50,7 +52,7 @@ const getAllUsers = async ({ search = '', interestIds = [], page = 1, limit = 20
 };
 
 /** Update user XP and level */
-const addXP = async (id, amount) => {
+const addXP = async (id, amount, updatedBy) => {
     // 1. Get current XP
     const userRes = await pool.query('SELECT xp FROM telegram_profile WHERE id = $1', [id]);
     if (userRes.rows.length === 0) return null;
@@ -64,8 +66,8 @@ const addXP = async (id, amount) => {
 
     // 3. Update profile
     const result = await pool.query(
-        'UPDATE telegram_profile SET xp = $1, level = $2 WHERE id = $3 RETURNING *',
-        [newXp, newLevel, id]
+        'UPDATE telegram_profile SET xp = $1, level = $2, updated_by = $3, updated_at = NOW() WHERE id = $4 RETURNING *',
+        [newXp, newLevel, updatedBy, id]
     );
 
     return result.rows[0];

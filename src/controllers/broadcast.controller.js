@@ -28,7 +28,7 @@ const scheduleBroadcast = async (req, res) => {
             value.message_text,
             value.interest_ids,
             value.scheduled_time,
-            req.admin.telegram_id
+            req.admin.id
         );
         return res.status(201).json({ success: true, data: result });
     } catch (err) {

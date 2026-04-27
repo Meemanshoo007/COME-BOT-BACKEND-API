@@ -10,7 +10,7 @@ const listAllPolls = async () => {
     return result.rows;
 };
 
-const createPollRecord = async (pollData) => {
+const createPollRecord = async (pollData, createdBy) => {
     const {
         question,
         options,
@@ -39,8 +39,9 @@ const createPollRecord = async (pollData) => {
                 scheduled_at,
                 is_sent,
                 created_at,
-                updated_at
-            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, FALSE, NOW(), NOW()) RETURNING id`,
+                updated_at,
+                created_by
+            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, FALSE, NOW(), NOW(), $9) RETURNING id`,
             [
                 question,
                 is_anonymous,
@@ -49,7 +50,8 @@ const createPollRecord = async (pollData) => {
                 correct_option_index,
                 explanation,
                 JSON.stringify(interest_ids),
-                scheduled_at
+                scheduled_at,
+                createdBy
             ]
         );
 

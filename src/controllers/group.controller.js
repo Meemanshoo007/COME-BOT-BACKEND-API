@@ -42,7 +42,7 @@ const toggleStatus = async (req, res) => {
     }
 
     try {
-        const updatedBy = req.admin.telegram_id;
+        const updatedBy = req.admin.id;
         const updated = await updateGroupStatus(id, status, updatedBy);
         if (!updated) {
             return res.status(404).json({ success: false, message: 'Group not found.' });
@@ -62,7 +62,7 @@ const bulkToggleStatus = async (req, res) => {
     }
 
     try {
-        const updatedBy = req.admin.telegram_id;
+        const updatedBy = req.admin.id;
         const updated = await bulkUpdateGroupStatus(ids, status, updatedBy);
         return res.status(200).json({ success: true, data: updated });
     } catch (err) {

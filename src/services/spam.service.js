@@ -13,12 +13,8 @@ const getAllSpam = async () => {
             s.created_at, 
             s.created_by,
             s.updated_at,
-            s.updated_by,
-            p1.name as creator_name,
-            p2.name as updater_name
+            s.updated_by
         FROM spam s
-        LEFT JOIN telegram_profile p1 ON s.created_by = p1.telegram_id
-        LEFT JOIN telegram_profile p2 ON s.updated_by = p2.telegram_id
         ORDER BY s.created_at DESC
     `);
     return result.rows;
@@ -29,7 +25,7 @@ const addSpamKeyword = async (keyword, createdBy) => {
     const normalized = keyword.toLowerCase().trim();
     try {
         const result = await pool.query(
-            'INSERT INTO spam (keyword, created_by, updated_by) VALUES ($1, $2, $2) RETURNING *',
+            'INSERT INTO spam (keyword, created_by, created_at) VALUES ($1, $2, NOW()) RETURNING *',
             [normalized, createdBy]
         );
         return result.rows[0];

@@ -22,7 +22,8 @@ const createPoll = async (req, res) => {
         return res.status(400).json({ success: false, message: error.details[0].message });
     }
     try {
-        const result = await createPollRecord(value);
+        const createdBy = req.admin.id;
+        const result = await createPollRecord(value, createdBy);
         return res.status(201).json({ success: true, message: 'Poll scheduled successfully.', data: result });
     } catch (err) {
         console.error('[Poll] Create error:', err.message);

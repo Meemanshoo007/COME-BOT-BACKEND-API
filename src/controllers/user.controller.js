@@ -28,8 +28,8 @@ const updateXP = async (req, res) => {
         if (amount === undefined || isNaN(amount)) {
             return res.status(400).json({ success: false, message: 'Invalid amount.' });
         }
-
-        const user = await addXP(id, parseInt(amount, 10));
+        const updatedBy = req.admin.id;
+        const user = await addXP(id, parseInt(amount, 10), updatedBy);
         if (!user) {
             return res.status(404).json({ success: false, message: 'User not found.' });
         }

@@ -18,7 +18,7 @@ const createSpam = async (req, res) => {
     }
 
     try {
-        const createdBy = req.admin.telegram_id;
+        const createdBy = req.admin.id;
         const result = await addSpamKeyword(value.keyword, createdBy);
         if (!result) {
             return res.status(409).json({ success: false, message: 'Keyword already exists.' });
@@ -39,7 +39,7 @@ const toggleStatus = async (req, res) => {
     }
 
     try {
-        const updatedBy = req.admin.telegram_id;
+        const updatedBy = req.admin.id;
         const updated = await updateSpamStatus(id, status, updatedBy);
         if (!updated) {
             return res.status(404).json({ success: false, message: 'Keyword not found.' });
@@ -59,7 +59,7 @@ const bulkToggleStatus = async (req, res) => {
     }
 
     try {
-        const updatedBy = req.admin.telegram_id;
+        const updatedBy = req.admin.id;
         const updated = await bulkUpdateSpamStatus(ids, status, updatedBy);
         return res.status(200).json({ success: true, data: updated });
     } catch (err) {

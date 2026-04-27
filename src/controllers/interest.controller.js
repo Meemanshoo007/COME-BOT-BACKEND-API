@@ -23,7 +23,8 @@ const createInterest = async (req, res) => {
     }
 
     try {
-        const createdBy = req.admin.telegram_id;
+        const createdBy = req.admin.id;
+        
         const result = await addInterest(value.name, createdBy);
         if (!result) {
             return res.status(409).json({ success: false, message: 'Interest already exists.' });
@@ -44,7 +45,7 @@ const toggleStatus = async (req, res) => {
     }
 
     try {
-        const updatedBy = req.admin.telegram_id;
+        const updatedBy = req.admin.id;
         const updated = await updateInterestStatus(id, status, updatedBy);
         if (!updated) {
             return res.status(404).json({ success: false, message: 'Interest not found.' });
@@ -64,7 +65,7 @@ const bulkToggleStatus = async (req, res) => {
     }
 
     try {
-        const updatedBy = req.admin.telegram_id;
+        const updatedBy = req.admin.id;
         const updated = await bulkUpdateInterestStatus(ids, status, updatedBy);
         return res.status(200).json({ success: true, data: updated });
     } catch (err) {
