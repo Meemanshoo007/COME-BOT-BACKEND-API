@@ -21,4 +21,47 @@ const getOverviewStats = async () => {
     };
 };
 
-module.exports = { getOverviewStats };
+/**
+ * Returns user join rates grouped by daily, weekly, or monthly intervals.
+ */
+const getUserJoinStats = async ({ interval = 'weekly' } = {}) => {
+    let truncUnit = 'week';
+    let stepInterval = '1 week';
+    let rangeInterval = '11 weeks';
+
+    if (interval === 'daily') {
+        truncUnit = 'day';
+        stepInterval = '1 day';
+        rangeInterval = '29 days';
+    } else if (interval === 'monthly') {
+        truncUnit = 'month';
+        stepInterval = '1 month';
+        rangeInterval = '11 months';
+    } else if (interval === 'yearly') {
+        truncUnit = 'year';
+        stepInterval = '1 year';
+        rangeInterval = '4 years';
+    }
+
+    const query = `
+        SELECT 
+            series.period AS period,
+            COALESCE(COUNT(p.id), 0)::INT AS count
+        FROM (
+            SELECT GENERATE_SERIES(
+                DATE_TRUNC($1, NOW() - CAST($2 AS INTERVAL)),
+                DATE_TRUNC($1, NOW()),
+                CAST($3 AS INTERVAL)
+            ) AS period
+        ) series
+        LEFT JOIN telegram_profile p 
+            ON DATE_TRUNC($1, p.created_at) = series.period
+        GROUP BY series.period
+        ORDER BY series.period ASC;
+    `;
+
+    const result = await pool.query(query, [truncUnit, rangeInterval, stepInterval]);
+    return result.rows;
+};
+
+module.exports = { getOverviewStats, getUserJoinStats };
