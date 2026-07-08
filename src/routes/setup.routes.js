@@ -115,6 +115,14 @@ router.get("/", async (req, res) => {
       ON CONFLICT (id) DO NOTHING
     `);
 
+        // Alter poll table to add new columns if they do not exist
+        await pool.query(`
+          ALTER TABLE poll ADD COLUMN IF NOT EXISTS description TEXT;
+          ALTER TABLE poll ADD COLUMN IF NOT EXISTS shuffle_options BOOLEAN DEFAULT TRUE;
+          ALTER TABLE pool ADD COLUMN IF NOT EXISTS close_date TIMESTAMPTZ;
+          ALTER TABLE pool ADD COLUMN IF NOT EXISTS hide_result BOOLEAN DEFAULT FALSE;
+        `);
+
         console.log("✅ [DB Setup] Database schema initialized successfully!");
 
         res.json({
