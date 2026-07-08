@@ -33,6 +33,7 @@ const broadcastCreateSchema = Joi.object({
 
 const pollCreateSchema = Joi.object({
     question: Joi.string().min(1).max(255).required(),
+    description: Joi.string().allow(null, ''),
     options: Joi.array().items(Joi.string().min(1).max(100)).min(2).max(10).required(),
     is_anonymous: Joi.boolean().default(true),
     allows_multiple_answers: Joi.boolean().default(false),
@@ -41,6 +42,9 @@ const pollCreateSchema = Joi.object({
     explanation: Joi.string().max(200).allow(null, ''),
     interest_ids: Joi.array().items(Joi.number().integer().positive()).allow(null),
     scheduled_at: Joi.string().isoDate().required(),
+    shuffle_options: Joi.boolean().default(true),
+    close_date: Joi.string().isoDate().allow(null),
+    hide_result: Joi.boolean().default(false),
 });
 
 module.exports = {

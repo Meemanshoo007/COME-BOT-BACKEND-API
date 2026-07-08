@@ -2,7 +2,8 @@ const {
     listAllPolls,
     createPollRecord,
     getPollAnalytics,
-    deletePollRecord
+    deletePollRecord,
+    savePollWinners
 } = require('../services/poll.service');
 const { pollCreateSchema } = require('../validators/schemas');
 
@@ -57,9 +58,28 @@ const cancelPoll = async (req, res) => {
     }
 };
 
+const saveWinners = async (req, res) => {
+    const id = parseInt(req.params.id, 10);
+    if (isNaN(id)) return res.status(400).json({ success: false, message: 'Invalid ID.' });
+    
+    const { winners } = req.body;
+    if (!winners || !Array.isArray(winners)) {
+        return res.status(400).json({ success: false, message: 'Winners must be a valid array.' });
+    }
+
+    try {
+        const data = await savePollWinners(id, winners);
+        return res.status(200).json({ success: true, message: 'Winners saved successfully.', data });
+    } catch (err) {
+        console.error('[Poll] Save winners error:', err.message);
+        return res.status(500).json({ success: false, message: 'Failed to save winners.' });
+    }
+};
+
 module.exports = {
     listPolls,
     createPoll,
     analytics,
-    cancelPoll
+    cancelPoll,
+    saveWinners
 };

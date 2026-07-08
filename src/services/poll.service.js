@@ -13,6 +13,7 @@ const listAllPolls = async () => {
 const createPollRecord = async (pollData, createdBy) => {
     const {
         question,
+        description,
         options,
         is_anonymous,
         allows_multiple_answers,
@@ -20,7 +21,10 @@ const createPollRecord = async (pollData, createdBy) => {
         correct_option_index,
         explanation,
         interest_ids,
-        scheduled_at
+        scheduled_at,
+        shuffle_options,
+        close_date,
+        hide_result
     } = pollData;
 
     const client = await pool.connect();
@@ -30,6 +34,7 @@ const createPollRecord = async (pollData, createdBy) => {
         const pollResult = await client.query(
             `INSERT INTO poll (
                 question, 
+                description,
                 is_anonymous, 
                 allows_multiple_answers, 
                 is_quiz, 
@@ -40,10 +45,14 @@ const createPollRecord = async (pollData, createdBy) => {
                 is_sent,
                 created_at,
                 updated_at,
-                created_by
-            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, FALSE, NOW(), NOW(), $9) RETURNING id`,
+                created_by,
+                shuffle_options,
+                close_date,
+                hide_result
+            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, FALSE, NOW(), NOW(), $10, $11, $12, $13) RETURNING id`,
             [
                 question,
+                description || null,
                 is_anonymous,
                 allows_multiple_answers,
                 is_quiz,
@@ -51,7 +60,10 @@ const createPollRecord = async (pollData, createdBy) => {
                 explanation,
                 JSON.stringify(interest_ids),
                 scheduled_at,
-                createdBy
+                createdBy,
+                shuffle_options !== undefined ? shuffle_options : true,
+                close_date || null,
+                hide_result !== undefined ? hide_result : false
             ]
         );
 
@@ -109,9 +121,18 @@ const deletePollRecord = async (pollId) => {
     return true;
 };
 
+const savePollWinners = async (pollId, winners) => {
+    const result = await pool.query(
+        'UPDATE poll SET random_winners = $1, updated_at = NOW() WHERE id = $2 RETURNING *',
+        [JSON.stringify(winners), pollId]
+    );
+    return result.rows[0];
+};
+
 module.exports = {
     listAllPolls,
     createPollRecord,
     getPollAnalytics,
-    deletePollRecord
+    deletePollRecord,
+    savePollWinners
 };
