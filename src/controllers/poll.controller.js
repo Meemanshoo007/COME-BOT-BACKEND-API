@@ -28,7 +28,7 @@ const createPoll = async (req, res) => {
         return res.status(201).json({ success: true, message: 'Poll scheduled successfully.', data: result });
     } catch (err) {
         console.error('[Poll] Create error:', err.message);
-        return res.status(500).json({ success: false, message: 'Failed to schedule poll.' });
+        return res.status(500).json({ success: false, message: err.message || 'Failed to schedule poll.' });
     }
 };
 
