@@ -16,6 +16,7 @@ const broadcastRoutes = require("./src/routes/broadcast.routes");
 const pollRoutes = require("./src/routes/poll.routes");
 const groupRoutes = require("./src/routes/group.routes");
 const userRoutes = require("./src/routes/user.routes");
+const adminUserRoutes = require("./src/routes/admin_user.routes");
 const { version } = require("joi");
 
 const app = express();
@@ -107,6 +108,8 @@ app.use("/broadcast", broadcastRoutes);
 app.use("/polls", pollRoutes);
 app.use("/groups", groupRoutes);
 app.use("/users", userRoutes);
+app.use("/admins", adminUserRoutes);
+app.use("/api/admins", adminUserRoutes);
 
 // ─── 404 Handler ─────────────────────────────────────────────────────────────
 app.use((req, res) => {

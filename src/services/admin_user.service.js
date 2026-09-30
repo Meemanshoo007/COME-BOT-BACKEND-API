@@ -1,0 +1,217 @@
+const pool = require('../config/db');
+
+// Ensure database schema supports string admin IDs and required fields
+(async () => {
+    try {
+        await pool.query(`
+            ALTER TABLE admin ALTER COLUMN id TYPE VARCHAR(255) USING id::VARCHAR;
+            ALTER TABLE admin ADD COLUMN IF NOT EXISTS password VARCHAR(255);
+            ALTER TABLE admin ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP;
+        `);
+        console.log('[Admin Service] admin table schema verified/migrated for string IDs.');
+    } catch (e) {
+        console.warn('[Admin Service] Schema migration check warning:', e.message);
+    }
+})();
+
+/**
+ * List all admins with pagination, search, and status filter.
+ * Joins with telegram_profile to optionally fetch name & username.
+ */
+const listAdmins = async ({ search = '', status = 'all', page = 1, limit = 20 } = {}) => {
+    const offset = (page - 1) * limit;
+    const conditions = [];
+    const params = [];
+    let paramIndex = 1;
+
+    if (search && search.trim() !== '') {
+        const searchParam = `%${search.trim()}%`;
+        params.push(searchParam);
+        conditions.push(`(a.id::TEXT ILIKE $${paramIndex} OR p.name ILIKE $${paramIndex} OR p.username ILIKE $${paramIndex})`);
+        paramIndex++;
+    }
+
+    if (status === 'active') {
+        conditions.push('a.status = true');
+    } else if (status === 'inactive') {
+        conditions.push('a.status = false');
+    }
+
+    const whereClause = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : '';
+
+    const query = `
+        SELECT 
+            a.id::TEXT AS id,
+            a.status,
+            a.created_at,
+            a.updated_at,
+            p.name,
+            p.username,
+            p.first_name,
+            p.last_name
+        FROM admin a
+        LEFT JOIN telegram_profile p ON p.telegram_id::TEXT = a.id::TEXT
+        ${whereClause}
+        ORDER BY a.created_at DESC
+        LIMIT $${paramIndex} OFFSET $${paramIndex + 1}
+    `;
+
+    const countQuery = `
+        SELECT COUNT(a.id) AS total
+        FROM admin a
+        LEFT JOIN telegram_profile p ON p.telegram_id::TEXT = a.id::TEXT
+        ${whereClause}
+    `;
+
+    const queryParams = [...params, limit, offset];
+    const [result, countResult] = await Promise.all([
+        pool.query(query, queryParams),
+        pool.query(countQuery, params),
+    ]);
+
+    const total = parseInt(countResult.rows[0].total, 10) || 0;
+    const totalPages = Math.ceil(total / limit) || 1;
+
+    return {
+        admins: result.rows,
+        total,
+        page,
+        limit,
+        totalPages,
+    };
+};
+
+/**
+ * Create a new admin.
+ */
+const createAdmin = async ({ id, password, status = true }) => {
+    const cleanId = String(id).trim();
+    const existing = await pool.query('SELECT id FROM admin WHERE id::TEXT = $1', [cleanId]);
+    if (existing.rows.length > 0) {
+        const err = new Error('Admin with this ID already exists.');
+        err.statusCode = 409;
+        throw err;
+    }
+
+    const result = await pool.query(`
+        INSERT INTO admin (id, password, status, created_at, updated_at)
+        VALUES ($1, $2, $3, NOW(), NOW())
+        RETURNING id::TEXT AS id, status, created_at, updated_at
+    `, [cleanId, password, status]);
+
+    return result.rows[0];
+};
+
+/**
+ * Update admin details (e.g. ID, status).
+ */
+const updateAdmin = async (id, { newId, status }) => {
+    const cleanId = String(id).trim();
+    const existing = await pool.query('SELECT id, status FROM admin WHERE id::TEXT = $1', [cleanId]);
+    if (existing.rows.length === 0) {
+        const err = new Error('Admin not found.');
+        err.statusCode = 404;
+        throw err;
+    }
+
+    if (newId !== undefined && newId !== null && String(newId).trim() !== cleanId) {
+        const cleanNewId = String(newId).trim();
+        const conflict = await pool.query('SELECT id FROM admin WHERE id::TEXT = $1', [cleanNewId]);
+        if (conflict.rows.length > 0) {
+            const err = new Error('Admin with the specified new ID already exists.');
+            err.statusCode = 409;
+            throw err;
+        }
+
+        const updateStatus = status !== undefined ? status : existing.rows[0].status;
+        const result = await pool.query(`
+            UPDATE admin 
+            SET id = $1, status = $2, updated_at = NOW()
+            WHERE id::TEXT = $3
+            RETURNING id::TEXT AS id, status, created_at, updated_at
+        `, [cleanNewId, updateStatus, cleanId]);
+
+        return result.rows[0];
+    } else {
+        const updateStatus = status !== undefined ? status : existing.rows[0].status;
+        const result = await pool.query(`
+            UPDATE admin 
+            SET status = $1, updated_at = NOW()
+            WHERE id::TEXT = $2
+            RETURNING id::TEXT AS id, status, created_at, updated_at
+        `, [updateStatus, cleanId]);
+
+        return result.rows[0];
+    }
+};
+
+/**
+ * Toggle admin active/inactive status.
+ */
+const toggleAdminStatus = async (id, status) => {
+    const cleanId = String(id).trim();
+    const result = await pool.query(`
+        UPDATE admin 
+        SET status = $1, updated_at = NOW()
+        WHERE id::TEXT = $2
+        RETURNING id::TEXT AS id, status, created_at, updated_at
+    `, [status, cleanId]);
+
+    if (result.rows.length === 0) {
+        const err = new Error('Admin not found.');
+        err.statusCode = 404;
+        throw err;
+    }
+
+    return result.rows[0];
+};
+
+/**
+ * Change admin password.
+ */
+const changeAdminPassword = async (id, newPassword) => {
+    const cleanId = String(id).trim();
+    const result = await pool.query(`
+        UPDATE admin 
+        SET password = $1, updated_at = NOW()
+        WHERE id::TEXT = $2
+        RETURNING id::TEXT AS id, status, created_at, updated_at
+    `, [newPassword, cleanId]);
+
+    if (result.rows.length === 0) {
+        const err = new Error('Admin not found.');
+        err.statusCode = 404;
+        throw err;
+    }
+
+    return result.rows[0];
+};
+
+/**
+ * Delete an admin.
+ */
+const deleteAdmin = async (id) => {
+    const cleanId = String(id).trim();
+    const result = await pool.query(`
+        DELETE FROM admin 
+        WHERE id::TEXT = $1
+        RETURNING id::TEXT AS id
+    `, [cleanId]);
+
+    if (result.rows.length === 0) {
+        const err = new Error('Admin not found.');
+        err.statusCode = 404;
+        throw err;
+    }
+
+    return result.rows[0];
+};
+
+module.exports = {
+    listAdmins,
+    createAdmin,
+    updateAdmin,
+    toggleAdminStatus,
+    changeAdminPassword,
+    deleteAdmin,
+};

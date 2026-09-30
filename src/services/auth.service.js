@@ -12,14 +12,14 @@ const pool = require("../config/db");
  */
 const loginAdmin = async (id, password) => {
   // 1. Check ADMIN_SECRET
-  console.log("Received ID:", id);
+  const adminId = String(id).trim();
+  console.log("Received ID:", adminId);
   console.log("Received password:", password);
-
 
   // 2. Check admin table
   const result = await pool.query(
-    "SELECT id, status, password FROM admin WHERE id = $1",
-    [id],
+    "SELECT id, status, password FROM admin WHERE id::TEXT = $1",
+    [adminId],
   );
 
   if (result.rows.length === 0) {
@@ -37,7 +37,7 @@ const loginAdmin = async (id, password) => {
   }
 
   // 3. Sign JWT
-  const token = jwt.sign({ id: id }, process.env.JWT_SECRET, {
+  const token = jwt.sign({ id: admin.id }, process.env.JWT_SECRET, {
     expiresIn: "8h",
   });
 

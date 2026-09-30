@@ -27,9 +27,11 @@ router.get("/", async (req, res) => {
 
       -- 2. Admin access
       CREATE TABLE IF NOT EXISTS admin (
-        id BIGINT PRIMARY KEY, -- telegram_id
+        id VARCHAR(255) PRIMARY KEY,
         status BOOLEAN DEFAULT TRUE,
-        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        password VARCHAR(255),
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       );
 
       -- 3. Bot Config
@@ -119,8 +121,15 @@ router.get("/", async (req, res) => {
         await pool.query(`
           ALTER TABLE poll ADD COLUMN IF NOT EXISTS description TEXT;
           ALTER TABLE poll ADD COLUMN IF NOT EXISTS shuffle_options BOOLEAN DEFAULT TRUE;
-          ALTER TABLE pool ADD COLUMN IF NOT EXISTS close_date TIMESTAMPTZ;
-          ALTER TABLE pool ADD COLUMN IF NOT EXISTS hide_result BOOLEAN DEFAULT FALSE;
+          ALTER TABLE poll ADD COLUMN IF NOT EXISTS close_date TIMESTAMPTZ;
+          ALTER TABLE poll ADD COLUMN IF NOT EXISTS hide_result BOOLEAN DEFAULT FALSE;
+        `);
+
+        // Alter admin table to allow string IDs and support password & updated_at
+        await pool.query(`
+          ALTER TABLE admin ALTER COLUMN id TYPE VARCHAR(255) USING id::VARCHAR;
+          ALTER TABLE admin ADD COLUMN IF NOT EXISTS password VARCHAR(255);
+          ALTER TABLE admin ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP;
         `);
 
         console.log("✅ [DB Setup] Database schema initialized successfully!");

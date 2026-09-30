@@ -1,7 +1,10 @@
 const Joi = require('joi');
 
 const loginSchema = Joi.object({
-  id: Joi.number().integer().positive().required(),
+  id: Joi.alternatives().try(
+    Joi.string().trim().min(1).max(128),
+    Joi.number().integer().positive()
+  ).required(),
 
   password: Joi.string()
     .min(6)               // minimum length (adjust if needed)
@@ -47,6 +50,27 @@ const pollCreateSchema = Joi.object({
     hide_result: Joi.boolean().default(false),
 });
 
+const adminCreateSchema = Joi.object({
+    id: Joi.alternatives().try(
+        Joi.string().trim().min(1).max(128),
+        Joi.number().integer().positive()
+    ).required(),
+    password: Joi.string().min(6).max(128).required(),
+    status: Joi.boolean().default(true),
+});
+
+const adminUpdateSchema = Joi.object({
+    newId: Joi.alternatives().try(
+        Joi.string().trim().min(1).max(128),
+        Joi.number().integer().positive()
+    ),
+    status: Joi.boolean(),
+}).min(1);
+
+const adminChangePasswordSchema = Joi.object({
+    password: Joi.string().min(6).max(128).required(),
+});
+
 module.exports = {
     loginSchema,
     configUpdateSchema,
@@ -54,4 +78,7 @@ module.exports = {
     interestAddSchema,
     broadcastCreateSchema,
     pollCreateSchema,
+    adminCreateSchema,
+    adminUpdateSchema,
+    adminChangePasswordSchema,
 };
