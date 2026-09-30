@@ -21,7 +21,7 @@ const listAdmins = async (req, res) => {
         return res.status(200).json({ success: true, ...data });
     } catch (err) {
         console.error('[Admin] List error:', err.message);
-        return res.status(500).json({ success: false, message: 'Failed to fetch admins.' });
+        return res.status(500).json({ success: false, message: err.message || 'Failed to fetch admins.' });
     }
 };
 

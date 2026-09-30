@@ -1,24 +1,33 @@
 const pool = require('../config/db');
 
+let schemaMigrated = false;
+
 // Ensure database schema supports string admin IDs and required fields
-(async () => {
+const ensureSchema = async () => {
+    if (schemaMigrated) return;
     try {
         await pool.query(`
             ALTER TABLE admin ALTER COLUMN id TYPE VARCHAR(255) USING id::VARCHAR;
             ALTER TABLE admin ADD COLUMN IF NOT EXISTS password VARCHAR(255);
             ALTER TABLE admin ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP;
         `);
+        schemaMigrated = true;
         console.log('[Admin Service] admin table schema verified/migrated for string IDs.');
     } catch (e) {
         console.warn('[Admin Service] Schema migration check warning:', e.message);
     }
-})();
+};
+
+// Trigger immediately on load
+ensureSchema();
 
 /**
  * List all admins with pagination, search, and status filter.
- * Joins with telegram_profile to optionally fetch name & username.
+ * Joins with telegram_profile to fetch admin's name.
  */
 const listAdmins = async ({ search = '', status = 'all', page = 1, limit = 20 } = {}) => {
+    await ensureSchema();
+
     const offset = (page - 1) * limit;
     const conditions = [];
     const params = [];
@@ -27,7 +36,7 @@ const listAdmins = async ({ search = '', status = 'all', page = 1, limit = 20 } 
     if (search && search.trim() !== '') {
         const searchParam = `%${search.trim()}%`;
         params.push(searchParam);
-        conditions.push(`(a.id::TEXT ILIKE $${paramIndex} OR p.name ILIKE $${paramIndex} OR p.username ILIKE $${paramIndex})`);
+        conditions.push(`(a.id::TEXT ILIKE $${paramIndex} OR p.name ILIKE $${paramIndex})`);
         paramIndex++;
     }
 
@@ -45,10 +54,7 @@ const listAdmins = async ({ search = '', status = 'all', page = 1, limit = 20 } 
             a.status,
             a.created_at,
             a.updated_at,
-            p.name,
-            p.username,
-            p.first_name,
-            p.last_name
+            p.name
         FROM admin a
         LEFT JOIN telegram_profile p ON p.telegram_id::TEXT = a.id::TEXT
         ${whereClause}
@@ -85,6 +91,8 @@ const listAdmins = async ({ search = '', status = 'all', page = 1, limit = 20 } 
  * Create a new admin.
  */
 const createAdmin = async ({ id, password, status = true }) => {
+    await ensureSchema();
+
     const cleanId = String(id).trim();
     const existing = await pool.query('SELECT id FROM admin WHERE id::TEXT = $1', [cleanId]);
     if (existing.rows.length > 0) {
@@ -106,6 +114,8 @@ const createAdmin = async ({ id, password, status = true }) => {
  * Update admin details (e.g. ID, status).
  */
 const updateAdmin = async (id, { newId, status }) => {
+    await ensureSchema();
+
     const cleanId = String(id).trim();
     const existing = await pool.query('SELECT id, status FROM admin WHERE id::TEXT = $1', [cleanId]);
     if (existing.rows.length === 0) {
@@ -149,6 +159,8 @@ const updateAdmin = async (id, { newId, status }) => {
  * Toggle admin active/inactive status.
  */
 const toggleAdminStatus = async (id, status) => {
+    await ensureSchema();
+
     const cleanId = String(id).trim();
     const result = await pool.query(`
         UPDATE admin 
@@ -170,6 +182,8 @@ const toggleAdminStatus = async (id, status) => {
  * Change admin password.
  */
 const changeAdminPassword = async (id, newPassword) => {
+    await ensureSchema();
+
     const cleanId = String(id).trim();
     const result = await pool.query(`
         UPDATE admin 
@@ -191,6 +205,8 @@ const changeAdminPassword = async (id, newPassword) => {
  * Delete an admin.
  */
 const deleteAdmin = async (id) => {
+    await ensureSchema();
+
     const cleanId = String(id).trim();
     const result = await pool.query(`
         DELETE FROM admin 
