@@ -17,7 +17,7 @@ const pollRoutes = require("./src/routes/poll.routes");
 const groupRoutes = require("./src/routes/group.routes");
 const userRoutes = require("./src/routes/user.routes");
 const adminUserRoutes = require("./src/routes/admin_user.routes");
-const { version } = require("joi");
+const roleRoutes = require("./src/routes/role.routes");
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -100,6 +100,7 @@ app.use("/api/setup-db", setupRoutes);
 
 // ─── API Routes ───────────────────────────────────────────────────────────────
 app.use("/auth", authRoutes);
+app.use("/api/auth", authRoutes);
 app.use("/config", configRoutes);
 app.use("/spam", spamRoutes);
 app.use("/interests", interestRoutes);
@@ -110,6 +111,8 @@ app.use("/groups", groupRoutes);
 app.use("/users", userRoutes);
 app.use("/admins", adminUserRoutes);
 app.use("/api/admins", adminUserRoutes);
+app.use("/roles", roleRoutes);
+app.use("/api/roles", roleRoutes);
 
 // ─── 404 Handler ─────────────────────────────────────────────────────────────
 app.use((req, res) => {

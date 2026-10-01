@@ -132,6 +132,41 @@ router.get("/", async (req, res) => {
           ALTER TABLE admin ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP;
         `);
 
+        // Roles table & foreign key on admin
+        await pool.query(`
+          CREATE TABLE IF NOT EXISTS roles (
+            id SERIAL PRIMARY KEY,
+            name VARCHAR(255) UNIQUE NOT NULL,
+            description TEXT,
+            permissions JSONB DEFAULT '[]'::jsonb,
+            is_system BOOLEAN DEFAULT FALSE,
+            status BOOLEAN DEFAULT TRUE,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+          );
+
+          ALTER TABLE admin ADD COLUMN IF NOT EXISTS role_id INT;
+          DO $$
+          BEGIN
+            IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'fk_admin_role') THEN
+              ALTER TABLE admin ADD CONSTRAINT fk_admin_role FOREIGN KEY (role_id) REFERENCES roles(id) ON DELETE SET NULL;
+            END IF;
+          END $$;
+
+          INSERT INTO roles (name, description, permissions, is_system, status)
+          VALUES 
+            ('Super Admin', 'Unrestricted full access across all capabilities, data, and settings.', '["*"]'::jsonb, true, true),
+            ('Community Moderator', 'Moderates user accounts, inspects spam activity, and manages spam rate limits.', '["dashboard.view", "polls.view", "polls.create", "users.view", "users.manage_xp", "spam.view", "spam.manage", "groups.view", "config.view", "config.spam_limit", "config.mute_duration", "config.maintenance_mode"]'::jsonb, false, true),
+            ('Content & Broadcast Lead', 'Creates announcements, promotional broadcasts, and manages maintenance messages.', '["dashboard.view", "broadcasts.view", "broadcasts.create", "broadcasts.cancel", "polls.view", "polls.create", "interests.view", "config.view", "config.maintenance_message"]'::jsonb, false, true),
+            ('Customer Support Specialist', 'Assists end-users, monitors user inquiries, and views bot settings.', '["dashboard.view", "users.view", "users.export", "interests.view", "interests.manage", "config.view"]'::jsonb, false, true),
+            ('Security Auditor', 'Audit logs, review admin access, inspect bot behavior and analytics without modification rights.', '["dashboard.view", "broadcasts.view", "polls.view", "users.view", "spam.view", "interests.view", "groups.view", "admins.view", "roles.view", "config.view"]'::jsonb, false, true)
+          ON CONFLICT (name) DO NOTHING;
+
+          UPDATE admin 
+          SET role_id = (SELECT id FROM roles WHERE is_system = true OR name = 'Super Admin' LIMIT 1)
+          WHERE role_id IS NULL;
+        `);
+
         console.log("✅ [DB Setup] Database schema initialized successfully!");
 
         res.json({

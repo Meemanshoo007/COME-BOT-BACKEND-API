@@ -10,9 +10,10 @@ const ensureSchema = async () => {
             ALTER TABLE admin ALTER COLUMN id TYPE VARCHAR(255) USING id::VARCHAR;
             ALTER TABLE admin ADD COLUMN IF NOT EXISTS password VARCHAR(255);
             ALTER TABLE admin ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP;
+            ALTER TABLE admin ADD COLUMN IF NOT EXISTS role_id INT;
         `);
         schemaMigrated = true;
-        console.log('[Admin Service] admin table schema verified/migrated for string IDs.');
+        console.log('[Admin Service] admin table schema verified/migrated for string IDs & role_id.');
     } catch (e) {
         console.warn('[Admin Service] Schema migration check warning:', e.message);
     }
@@ -54,9 +55,12 @@ const listAdmins = async ({ search = '', status = 'all', page = 1, limit = 20 } 
             a.status,
             a.created_at,
             a.updated_at,
+            a.role_id,
+            COALESCE(r.name, 'Super Admin') AS role_name,
             p.name
         FROM admin a
         LEFT JOIN telegram_profile p ON p.telegram_id::TEXT = a.id::TEXT
+        LEFT JOIN roles r ON r.id = a.role_id
         ${whereClause}
         ORDER BY a.created_at DESC
         LIMIT $${paramIndex} OFFSET $${paramIndex + 1}
@@ -90,7 +94,7 @@ const listAdmins = async ({ search = '', status = 'all', page = 1, limit = 20 } 
 /**
  * Create a new admin.
  */
-const createAdmin = async ({ id, password, status = true }) => {
+const createAdmin = async ({ id, password, status = true, role_id }) => {
     await ensureSchema();
 
     const cleanId = String(id).trim();
@@ -101,58 +105,68 @@ const createAdmin = async ({ id, password, status = true }) => {
         throw err;
     }
 
-    const result = await pool.query(`
-        INSERT INTO admin (id, password, status, created_at, updated_at)
-        VALUES ($1, $2, $3, NOW(), NOW())
-        RETURNING id::TEXT AS id, status, created_at, updated_at
-    `, [cleanId, password, status]);
+    let assignedRoleId = role_id;
+    if (!assignedRoleId) {
+        const defaultRole = await pool.query("SELECT id FROM roles WHERE is_system = true OR name = 'Super Admin' LIMIT 1");
+        assignedRoleId = defaultRole.rows[0]?.id || 1;
+    }
 
-    return result.rows[0];
+    const result = await pool.query(`
+        INSERT INTO admin (id, password, status, role_id, created_at, updated_at)
+        VALUES ($1, $2, $3, $4, NOW(), NOW())
+        RETURNING id::TEXT AS id, status, role_id, created_at, updated_at
+    `, [cleanId, password, status, assignedRoleId]);
+
+    const admin = result.rows[0];
+    const roleInfo = await pool.query('SELECT name FROM roles WHERE id = $1', [admin.role_id]);
+    admin.role_name = roleInfo.rows[0]?.name || 'Super Admin';
+
+    return admin;
 };
 
 /**
- * Update admin details (e.g. ID, status).
+ * Update admin details (e.g. ID, status, role_id).
  */
-const updateAdmin = async (id, { newId, status }) => {
+const updateAdmin = async (id, { newId, status, role_id }) => {
     await ensureSchema();
 
     const cleanId = String(id).trim();
-    const existing = await pool.query('SELECT id, status FROM admin WHERE id::TEXT = $1', [cleanId]);
+    const existing = await pool.query('SELECT id, status, role_id FROM admin WHERE id::TEXT = $1', [cleanId]);
     if (existing.rows.length === 0) {
         const err = new Error('Admin not found.');
         err.statusCode = 404;
         throw err;
     }
 
-    if (newId !== undefined && newId !== null && String(newId).trim() !== cleanId) {
-        const cleanNewId = String(newId).trim();
-        const conflict = await pool.query('SELECT id FROM admin WHERE id::TEXT = $1', [cleanNewId]);
+    const current = existing.rows[0];
+    const targetId = (newId !== undefined && newId !== null && String(newId).trim() !== cleanId)
+        ? String(newId).trim()
+        : cleanId;
+
+    if (targetId !== cleanId) {
+        const conflict = await pool.query('SELECT id FROM admin WHERE id::TEXT = $1', [targetId]);
         if (conflict.rows.length > 0) {
             const err = new Error('Admin with the specified new ID already exists.');
             err.statusCode = 409;
             throw err;
         }
-
-        const updateStatus = status !== undefined ? status : existing.rows[0].status;
-        const result = await pool.query(`
-            UPDATE admin 
-            SET id = $1, status = $2, updated_at = NOW()
-            WHERE id::TEXT = $3
-            RETURNING id::TEXT AS id, status, created_at, updated_at
-        `, [cleanNewId, updateStatus, cleanId]);
-
-        return result.rows[0];
-    } else {
-        const updateStatus = status !== undefined ? status : existing.rows[0].status;
-        const result = await pool.query(`
-            UPDATE admin 
-            SET status = $1, updated_at = NOW()
-            WHERE id::TEXT = $2
-            RETURNING id::TEXT AS id, status, created_at, updated_at
-        `, [updateStatus, cleanId]);
-
-        return result.rows[0];
     }
+
+    const updateStatus = status !== undefined ? status : current.status;
+    const updateRoleId = role_id !== undefined ? role_id : current.role_id;
+
+    const result = await pool.query(`
+        UPDATE admin 
+        SET id = $1, status = $2, role_id = $3, updated_at = NOW()
+        WHERE id::TEXT = $4
+        RETURNING id::TEXT AS id, status, role_id, created_at, updated_at
+    `, [targetId, updateStatus, updateRoleId, cleanId]);
+
+    const updated = result.rows[0];
+    const roleInfo = await pool.query('SELECT name FROM roles WHERE id = $1', [updated.role_id]);
+    updated.role_name = roleInfo.rows[0]?.name || 'Super Admin';
+
+    return updated;
 };
 
 /**

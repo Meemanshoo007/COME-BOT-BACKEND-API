@@ -57,6 +57,7 @@ const adminCreateSchema = Joi.object({
     ).required(),
     password: Joi.string().min(6).max(128).required(),
     status: Joi.boolean().default(true),
+    role_id: Joi.number().integer().positive().allow(null),
 });
 
 const adminUpdateSchema = Joi.object({
@@ -65,11 +66,26 @@ const adminUpdateSchema = Joi.object({
         Joi.number().integer().positive()
     ),
     status: Joi.boolean(),
+    role_id: Joi.number().integer().positive().allow(null),
 }).min(1);
 
 const adminChangePasswordSchema = Joi.object({
     password: Joi.string().min(6).max(128).required(),
 });
+
+const roleCreateSchema = Joi.object({
+    name: Joi.string().trim().min(2).max(100).required(),
+    description: Joi.string().trim().max(500).allow('', null),
+    permissions: Joi.array().items(Joi.string().trim().min(1).max(100)).min(1).required(),
+    status: Joi.boolean().default(true),
+});
+
+const roleUpdateSchema = Joi.object({
+    name: Joi.string().trim().min(2).max(100),
+    description: Joi.string().trim().max(500).allow('', null),
+    permissions: Joi.array().items(Joi.string().trim().min(1).max(100)).min(1),
+    status: Joi.boolean(),
+}).min(1);
 
 module.exports = {
     loginSchema,
@@ -81,4 +97,6 @@ module.exports = {
     adminCreateSchema,
     adminUpdateSchema,
     adminChangePasswordSchema,
+    roleCreateSchema,
+    roleUpdateSchema,
 };
