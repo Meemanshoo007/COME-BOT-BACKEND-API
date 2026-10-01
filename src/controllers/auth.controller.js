@@ -11,19 +11,19 @@ const login = async (req, res) => {
 
   try {
     const result = await loginAdmin(value.id, value.password);
-
-    if (!result) {
-      return res.status(401).json({
-        success: false,
-        message: "Invalid credentials or unauthorized admin.",
-      });
-    }
     return res.status(200).json({
       success: true,
       token: result.token,
       admin: result.admin,
     });
   } catch (err) {
+    const statusCode = err.statusCode || 500;
+    if (statusCode < 500) {
+      return res.status(statusCode).json({
+        success: false,
+        message: err.message,
+      });
+    }
     console.error("[Auth] Login error:", err.message);
     return res
       .status(500)
@@ -45,6 +45,10 @@ const getMe = async (req, res) => {
 
     return res.status(200).json({ success: true, data: profile });
   } catch (err) {
+    const statusCode = err.statusCode || 500;
+    if (statusCode < 500) {
+      return res.status(statusCode).json({ success: false, message: err.message });
+    }
     console.error("[Auth] getMe error:", err.message);
     return res.status(500).json({ success: false, message: "Internal server error." });
   }
