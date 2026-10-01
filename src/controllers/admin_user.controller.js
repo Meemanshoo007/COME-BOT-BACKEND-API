@@ -7,13 +7,14 @@ const {
 
 const listAdmins = async (req, res) => {
     try {
-        const { search = '', status = 'all', page = 1, limit = 20 } = req.query;
+        const { search = '', status = 'all', role_id, page = 1, limit = 20 } = req.query;
         const validStatuses = ['all', 'active', 'inactive'];
         const cleanStatus = validStatuses.includes(status) ? status : 'all';
 
         const data = await adminUserService.listAdmins({
             search,
             status: cleanStatus,
+            role_id,
             page: Math.max(1, parseInt(page, 10) || 1),
             limit: Math.min(100, Math.max(1, parseInt(limit, 10) || 20)),
         });

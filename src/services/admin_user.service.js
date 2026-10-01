@@ -26,7 +26,7 @@ ensureSchema();
  * List all admins with pagination, search, and status filter.
  * Joins with telegram_profile to fetch admin's name.
  */
-const listAdmins = async ({ search = '', status = 'all', page = 1, limit = 20 } = {}) => {
+const listAdmins = async ({ search = '', status = 'all', role_id, page = 1, limit = 20 } = {}) => {
     await ensureSchema();
 
     const offset = (page - 1) * limit;
@@ -45,6 +45,15 @@ const listAdmins = async ({ search = '', status = 'all', page = 1, limit = 20 } 
         conditions.push('a.status = true');
     } else if (status === 'inactive') {
         conditions.push('a.status = false');
+    }
+
+    if (role_id !== undefined && role_id !== null && role_id !== '' && role_id !== 'all') {
+        const parsedRoleId = parseInt(role_id, 10);
+        if (!isNaN(parsedRoleId)) {
+            params.push(parsedRoleId);
+            conditions.push(`(a.role_id = $${paramIndex} OR (a.role_id IS NULL AND (SELECT id FROM roles WHERE is_system = true OR name = 'Super Admin' LIMIT 1) = $${paramIndex}))`);
+            paramIndex++;
+        }
     }
 
     const whereClause = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : '';
