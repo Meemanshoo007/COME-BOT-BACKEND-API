@@ -198,14 +198,20 @@ const getAuditLogs = async ({
         paramIndex++;
     }
 
-    if (start_date) {
-        params.push(start_date);
+    if (start_date && String(start_date).trim() !== '') {
+        const cleanStart = String(start_date).includes('T') || String(start_date).includes(' ') 
+            ? String(start_date).trim() 
+            : `${String(start_date).trim()} 00:00:00`;
+        params.push(cleanStart);
         conditions.push(`l.created_at >= $${paramIndex}`);
         paramIndex++;
     }
 
-    if (end_date) {
-        params.push(end_date);
+    if (end_date && String(end_date).trim() !== '') {
+        const cleanEnd = String(end_date).includes('T') || String(end_date).includes(' ') 
+            ? String(end_date).trim() 
+            : `${String(end_date).trim()} 23:59:59.999`;
+        params.push(cleanEnd);
         conditions.push(`l.created_at <= $${paramIndex}`);
         paramIndex++;
     }
@@ -268,6 +274,8 @@ const getLatestLogs = async ({
     module: filterModule,
     status,
     search = '',
+    start_date,
+    end_date,
 } = {}) => {
     await ensureSchema();
     const cleanAfterId = parseInt(after_id, 10);
@@ -311,6 +319,24 @@ const getLatestLogs = async ({
         paramIndex++;
     }
 
+    if (start_date && String(start_date).trim() !== '') {
+        const cleanStart = String(start_date).includes('T') || String(start_date).includes(' ') 
+            ? String(start_date).trim() 
+            : `${String(start_date).trim()} 00:00:00`;
+        params.push(cleanStart);
+        conditions.push(`l.created_at >= $${paramIndex}`);
+        paramIndex++;
+    }
+
+    if (end_date && String(end_date).trim() !== '') {
+        const cleanEnd = String(end_date).includes('T') || String(end_date).includes(' ') 
+            ? String(end_date).trim() 
+            : `${String(end_date).trim()} 23:59:59.999`;
+        params.push(cleanEnd);
+        conditions.push(`l.created_at <= $${paramIndex}`);
+        paramIndex++;
+    }
+
     const whereClause = `WHERE ${conditions.join(' AND ')}`;
     const dataQuery = `
         SELECT 
@@ -342,10 +368,86 @@ const getLatestLogs = async ({
     };
 };
 
+/**
+ * Clear / purge audit logs based on filter criteria.
+ * Returns the count of deleted records.
+ */
+const clearAuditLogs = async ({
+    search = '',
+    admin_id,
+    module: filterModule,
+    status,
+    start_date,
+    end_date,
+} = {}) => {
+    await ensureSchema();
+
+    const conditions = [];
+    const params = [];
+    let paramIndex = 1;
+
+    if (search && search.trim() !== '') {
+        const s = `%${search.trim()}%`;
+        params.push(s);
+        conditions.push(`(
+            admin_id ILIKE $${paramIndex} OR 
+            COALESCE(admin_name, '') ILIKE $${paramIndex} OR 
+            action ILIKE $${paramIndex} OR 
+            module ILIKE $${paramIndex} OR 
+            description ILIKE $${paramIndex} OR
+            COALESCE(error_message, '') ILIKE $${paramIndex}
+        )`);
+        paramIndex++;
+    }
+
+    if (admin_id && admin_id.trim() !== '' && admin_id !== 'all') {
+        params.push(admin_id.trim());
+        conditions.push(`admin_id = $${paramIndex}`);
+        paramIndex++;
+    }
+
+    if (filterModule && filterModule.trim() !== '' && filterModule !== 'all') {
+        params.push(filterModule.trim().toUpperCase());
+        conditions.push(`UPPER(module) = $${paramIndex}`);
+        paramIndex++;
+    }
+
+    if (status && status.trim() !== '' && status !== 'all') {
+        params.push(status.trim().toUpperCase());
+        conditions.push(`UPPER(status) = $${paramIndex}`);
+        paramIndex++;
+    }
+
+    if (start_date && String(start_date).trim() !== '') {
+        const cleanStart = String(start_date).includes('T') || String(start_date).includes(' ') 
+            ? String(start_date).trim() 
+            : `${String(start_date).trim()} 00:00:00`;
+        params.push(cleanStart);
+        conditions.push(`created_at >= $${paramIndex}`);
+        paramIndex++;
+    }
+
+    if (end_date && String(end_date).trim() !== '') {
+        const cleanEnd = String(end_date).includes('T') || String(end_date).includes(' ') 
+            ? String(end_date).trim() 
+            : `${String(end_date).trim()} 23:59:59.999`;
+        params.push(cleanEnd);
+        conditions.push(`created_at <= $${paramIndex}`);
+        paramIndex++;
+    }
+
+    const whereClause = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : '';
+    const query = `DELETE FROM audit_logs ${whereClause}`;
+    const result = await pool.query(query, params);
+
+    return result.rowCount || 0;
+};
+
 module.exports = {
     recordLog,
     getAuditLogs,
     getLatestLogs,
+    clearAuditLogs,
     auditEmitter,
     ensureSchema,
 };

@@ -97,9 +97,64 @@ const streamAuditLogs = (req, res) => {
     });
 };
 
+const clearAuditLogs = async (req, res) => {
+    try {
+        const {
+            search = '',
+            admin_id,
+            module: filterModule,
+            status,
+            start_date,
+            end_date,
+        } = req.query;
+
+        const deletedCount = await auditLogService.clearAuditLogs({
+            search,
+            admin_id,
+            module: filterModule,
+            status,
+            start_date,
+            end_date,
+        });
+
+        // Record an audit log for the clear action
+        await auditLogService.recordLog({
+            req,
+            action: 'CLEAR_LOGS',
+            module: 'LOGS',
+            description: `Cleared ${deletedCount} audit log record(s) matching filter criteria.`,
+            details: {
+                deletedCount,
+                filters: {
+                    search,
+                    admin_id,
+                    module: filterModule,
+                    status,
+                    start_date,
+                    end_date,
+                },
+            },
+            status: 'SUCCESS',
+        });
+
+        return res.status(200).json({
+            success: true,
+            message: `Successfully cleared ${deletedCount} audit log record(s).`,
+            data: { deletedCount },
+        });
+    } catch (err) {
+        console.error('[Audit Log] clearAuditLogs error:', err.message);
+        return res.status(500).json({
+            success: false,
+            message: 'Failed to clear audit logs.',
+        });
+    }
+};
+
 module.exports = {
     listAuditLogs,
     getLatestAuditLogs,
     streamAuditLogs,
+    clearAuditLogs,
 };
 
