@@ -7,6 +7,7 @@ const {
     getBroadcastTargetUsers,
 } = require('../services/broadcast.service');
 const { broadcastCreateSchema } = require('../validators/schemas');
+const { recordLog } = require('../services/audit_log.service');
 
 const listBroadcasts = async (req, res) => {
     try {
@@ -30,9 +31,28 @@ const scheduleBroadcast = async (req, res) => {
             value.scheduled_time,
             req.admin.id
         );
+
+        await recordLog({
+            req,
+            action: 'SCHEDULE_BROADCAST',
+            module: 'BROADCAST',
+            description: `Scheduled broadcast #${result.id}`,
+            details: { id: result.id, interest_ids: value.interest_ids, scheduled_time: value.scheduled_time },
+            status: 'SUCCESS',
+        });
+
         return res.status(201).json({ success: true, data: result });
     } catch (err) {
         console.error('[Broadcast] Create error:', err.message);
+        await recordLog({
+            req,
+            action: 'SCHEDULE_BROADCAST',
+            module: 'BROADCAST',
+            description: 'Failed to schedule broadcast',
+            details: value,
+            status: 'FAILED',
+            errorMessage: err.message,
+        });
         return res.status(500).json({ success: false, message: 'Failed to schedule broadcast.' });
     }
 };
@@ -44,14 +64,42 @@ const softCancelBroadcast = async (req, res) => {
     try {
         const cancelled = await cancelBroadcast(id);
         if (!cancelled) {
+            await recordLog({
+                req,
+                action: 'CANCEL_BROADCAST',
+                module: 'BROADCAST',
+                description: `Failed to cancel broadcast #${id}: not found or not pending`,
+                details: { id },
+                status: 'FAILED',
+                errorMessage: 'Broadcast not found, already sent, or already cancelled.',
+            });
             return res.status(404).json({
                 success: false,
                 message: 'Broadcast not found, already sent, or already cancelled.',
             });
         }
+
+        await recordLog({
+            req,
+            action: 'CANCEL_BROADCAST',
+            module: 'BROADCAST',
+            description: `Cancelled broadcast #${id}`,
+            details: { id },
+            status: 'SUCCESS',
+        });
+
         return res.status(200).json({ success: true, message: 'Broadcast cancelled.' });
     } catch (err) {
         console.error('[Broadcast] Cancel error:', err.message);
+        await recordLog({
+            req,
+            action: 'CANCEL_BROADCAST',
+            module: 'BROADCAST',
+            description: `Failed to cancel broadcast #${id}`,
+            details: { id },
+            status: 'FAILED',
+            errorMessage: err.message,
+        });
         return res.status(500).json({ success: false, message: 'Failed to cancel broadcast.' });
     }
 };

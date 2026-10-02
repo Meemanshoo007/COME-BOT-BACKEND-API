@@ -1,5 +1,6 @@
 const { loginAdmin, getAdminProfile } = require("../services/auth.service");
 const { loginSchema } = require("../validators/schemas");
+const { recordLog } = require("../services/audit_log.service");
 
 const login = async (req, res) => {
   const { error, value } = loginSchema.validate(req.body);
@@ -11,12 +12,35 @@ const login = async (req, res) => {
 
   try {
     const result = await loginAdmin(value.id, value.password);
+
+    await recordLog({
+      req,
+      adminId: result.admin.id,
+      adminName: result.admin.name || result.admin.username,
+      action: 'LOGIN',
+      module: 'AUTH',
+      description: `Admin #${result.admin.id} logged in successfully`,
+      details: { role: result.admin.role_name },
+      status: 'SUCCESS',
+    });
+
     return res.status(200).json({
       success: true,
       token: result.token,
       admin: result.admin,
     });
   } catch (err) {
+    await recordLog({
+      req,
+      adminId: value.id,
+      action: 'LOGIN',
+      module: 'AUTH',
+      description: `Failed login attempt for ID: ${value.id}`,
+      details: { attempted_id: value.id },
+      status: 'FAILED',
+      errorMessage: err.message,
+    });
+
     const statusCode = err.statusCode || 500;
     if (statusCode < 500) {
       return res.status(statusCode).json({

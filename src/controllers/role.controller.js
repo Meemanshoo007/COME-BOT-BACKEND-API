@@ -1,5 +1,6 @@
 const roleService = require('../services/role.service');
 const { roleCreateSchema, roleUpdateSchema } = require('../validators/schemas');
+const { recordLog } = require('../services/audit_log.service');
 const Joi = require('joi');
 
 const listRoles = async (req, res) => {
@@ -45,6 +46,16 @@ const createRole = async (req, res) => {
 
   try {
     const role = await roleService.createRole(value);
+
+    await recordLog({
+      req,
+      action: 'CREATE_ROLE',
+      module: 'ROLES',
+      description: `Created role "${role.name}" (ID #${role.id})`,
+      details: { id: role.id, name: role.name, permissions: role.permissions, is_active: role.is_active },
+      status: 'SUCCESS',
+    });
+
     return res.status(201).json({
       success: true,
       message: 'Role created successfully.',
@@ -52,6 +63,15 @@ const createRole = async (req, res) => {
     });
   } catch (err) {
     console.error('[Role Controller] createRole error:', err.message);
+    await recordLog({
+      req,
+      action: 'CREATE_ROLE',
+      module: 'ROLES',
+      description: `Failed to create role "${value?.name || 'unknown'}"`,
+      details: value,
+      status: 'FAILED',
+      errorMessage: err.message,
+    });
     return res.status(err.statusCode || 500).json({
       success: false,
       message: err.message || 'Internal server error.',
@@ -72,6 +92,16 @@ const updateRole = async (req, res) => {
 
   try {
     const updated = await roleService.updateRole(id, value);
+
+    await recordLog({
+      req,
+      action: 'UPDATE_ROLE',
+      module: 'ROLES',
+      description: `Updated role "${updated.name}" (ID #${id})`,
+      details: { id, changes: value },
+      status: 'SUCCESS',
+    });
+
     return res.status(200).json({
       success: true,
       message: 'Role updated successfully.',
@@ -79,6 +109,15 @@ const updateRole = async (req, res) => {
     });
   } catch (err) {
     console.error('[Role Controller] updateRole error:', err.message);
+    await recordLog({
+      req,
+      action: 'UPDATE_ROLE',
+      module: 'ROLES',
+      description: `Failed to update role #${id}`,
+      details: { id, changes: value },
+      status: 'FAILED',
+      errorMessage: err.message,
+    });
     return res.status(err.statusCode || 500).json({
       success: false,
       message: err.message || 'Internal server error.',
@@ -102,6 +141,16 @@ const toggleRoleStatus = async (req, res) => {
 
   try {
     const updated = await roleService.toggleRoleStatus(id, value.status);
+
+    await recordLog({
+      req,
+      action: 'TOGGLE_ROLE_STATUS',
+      module: 'ROLES',
+      description: `${value.status ? 'Activated' : 'Deactivated'} role "${updated.name}" (ID #${id})`,
+      details: { id, status: value.status },
+      status: 'SUCCESS',
+    });
+
     return res.status(200).json({
       success: true,
       message: `Role status updated to ${value.status ? 'active' : 'inactive'}.`,
@@ -109,6 +158,15 @@ const toggleRoleStatus = async (req, res) => {
     });
   } catch (err) {
     console.error('[Role Controller] toggleRoleStatus error:', err.message);
+    await recordLog({
+      req,
+      action: 'TOGGLE_ROLE_STATUS',
+      module: 'ROLES',
+      description: `Failed to toggle status for role #${id}`,
+      details: { id, status: value?.status },
+      status: 'FAILED',
+      errorMessage: err.message,
+    });
     return res.status(err.statusCode || 500).json({
       success: false,
       message: err.message || 'Internal server error.',
@@ -124,6 +182,16 @@ const deleteRole = async (req, res) => {
 
   try {
     const deleted = await roleService.deleteRole(id);
+
+    await recordLog({
+      req,
+      action: 'DELETE_ROLE',
+      module: 'ROLES',
+      description: `Deleted role "${deleted.name}" (ID #${id})`,
+      details: { id, name: deleted.name },
+      status: 'SUCCESS',
+    });
+
     return res.status(200).json({
       success: true,
       message: `Role "${deleted.name}" deleted successfully.`,
@@ -131,6 +199,15 @@ const deleteRole = async (req, res) => {
     });
   } catch (err) {
     console.error('[Role Controller] deleteRole error:', err.message);
+    await recordLog({
+      req,
+      action: 'DELETE_ROLE',
+      module: 'ROLES',
+      description: `Failed to delete role #${id}`,
+      details: { id },
+      status: 'FAILED',
+      errorMessage: err.message,
+    });
     return res.status(err.statusCode || 500).json({
       success: false,
       message: err.message || 'Internal server error.',

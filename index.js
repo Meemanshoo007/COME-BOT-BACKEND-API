@@ -18,6 +18,7 @@ const groupRoutes = require("./src/routes/group.routes");
 const userRoutes = require("./src/routes/user.routes");
 const adminUserRoutes = require("./src/routes/admin_user.routes");
 const roleRoutes = require("./src/routes/role.routes");
+const auditLogRoutes = require("./src/routes/audit_log.routes");
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -113,6 +114,8 @@ app.use("/admins", adminUserRoutes);
 app.use("/api/admins", adminUserRoutes);
 app.use("/roles", roleRoutes);
 app.use("/api/roles", roleRoutes);
+app.use("/logs", auditLogRoutes);
+app.use("/api/logs", auditLogRoutes);
 
 // ─── 404 Handler ─────────────────────────────────────────────────────────────
 app.use((req, res) => {

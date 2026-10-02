@@ -4,6 +4,7 @@ const {
     adminUpdateSchema,
     adminChangePasswordSchema,
 } = require('../validators/schemas');
+const { recordLog } = require('../services/audit_log.service');
 
 const listAdmins = async (req, res) => {
     try {
@@ -41,6 +42,15 @@ const createAdmin = async (req, res) => {
             if (roleIsSuper) {
                 const callerIsSuper = await adminUserService.isSuperAdminAccount(req.admin?.id);
                 if (!callerIsSuper) {
+                    await recordLog({
+                        req,
+                        action: 'CREATE_ADMIN',
+                        module: 'ADMINS',
+                        description: `Unauthorized attempt to create Super Admin #${value.id}`,
+                        details: { target_id: value.id, role_id: value.role_id },
+                        status: 'FAILED',
+                        errorMessage: 'Only Super Admins can create an admin with the Super Admin role.',
+                    });
                     return res.status(403).json({
                         success: false,
                         message: 'Only Super Admins can create an admin with the Super Admin role.',
@@ -50,6 +60,16 @@ const createAdmin = async (req, res) => {
         }
 
         const data = await adminUserService.createAdmin(value);
+
+        await recordLog({
+            req,
+            action: 'CREATE_ADMIN',
+            module: 'ADMINS',
+            description: `Created admin #${data.id} (${data.role_name || 'No Role'})`,
+            details: { id: data.id, role_id: data.role_id, role_name: data.role_name },
+            status: 'SUCCESS',
+        });
+
         return res.status(201).json({
             success: true,
             data,
@@ -57,6 +77,15 @@ const createAdmin = async (req, res) => {
         });
     } catch (err) {
         console.error('[Admin] Create error:', err.message);
+        await recordLog({
+            req,
+            action: 'CREATE_ADMIN',
+            module: 'ADMINS',
+            description: `Failed to create admin #${value?.id || 'unknown'}`,
+            details: { id: value?.id, role_id: value?.role_id },
+            status: 'FAILED',
+            errorMessage: err.message,
+        });
         const statusCode = err.statusCode || 500;
         return res.status(statusCode).json({
             success: false,
@@ -95,6 +124,15 @@ const updateAdmin = async (req, res) => {
         // Safeguard: Super Admin accounts cannot be modified by another admin
         const targetIsSuper = await adminUserService.isSuperAdminAccount(id);
         if (targetIsSuper && !isSelf) {
+            await recordLog({
+                req,
+                action: 'UPDATE_ADMIN',
+                module: 'ADMINS',
+                description: `Unauthorized attempt to modify Super Admin #${id}`,
+                details: { target_id: id, attempted_changes: value },
+                status: 'FAILED',
+                errorMessage: 'Super Admin accounts cannot be modified by another admin.',
+            });
             return res.status(403).json({
                 success: false,
                 message: 'Super Admin accounts cannot be modified by another admin.',
@@ -118,6 +156,15 @@ const updateAdmin = async (req, res) => {
             if (newRoleIsSuper) {
                 const callerIsSuper = await adminUserService.isSuperAdminAccount(callerId);
                 if (!callerIsSuper) {
+                    await recordLog({
+                        req,
+                        action: 'UPDATE_ADMIN',
+                        module: 'ADMINS',
+                        description: `Unauthorized attempt to assign Super Admin role to #${id}`,
+                        details: { target_id: id, role_id: value.role_id },
+                        status: 'FAILED',
+                        errorMessage: 'Only Super Admins can assign the Super Admin role.',
+                    });
                     return res.status(403).json({
                         success: false,
                         message: 'Only Super Admins can assign the Super Admin role.',
@@ -127,6 +174,16 @@ const updateAdmin = async (req, res) => {
         }
 
         const data = await adminUserService.updateAdmin(id, value);
+
+        await recordLog({
+            req,
+            action: 'UPDATE_ADMIN',
+            module: 'ADMINS',
+            description: `Updated admin #${id}`,
+            details: { id, changes: value },
+            status: 'SUCCESS',
+        });
+
         return res.status(200).json({
             success: true,
             data,
@@ -134,6 +191,15 @@ const updateAdmin = async (req, res) => {
         });
     } catch (err) {
         console.error('[Admin] Update error:', err.message);
+        await recordLog({
+            req,
+            action: 'UPDATE_ADMIN',
+            module: 'ADMINS',
+            description: `Failed to update admin #${id}`,
+            details: { id, changes: value },
+            status: 'FAILED',
+            errorMessage: err.message,
+        });
         const statusCode = err.statusCode || 500;
         return res.status(statusCode).json({
             success: false,
@@ -168,6 +234,15 @@ const toggleStatus = async (req, res) => {
         // Safeguard: Super Admin accounts cannot be deactivated
         const targetIsSuper = await adminUserService.isSuperAdminAccount(id);
         if (targetIsSuper) {
+            await recordLog({
+                req,
+                action: 'TOGGLE_STATUS',
+                module: 'ADMINS',
+                description: `Attempted to deactivate Super Admin #${id}`,
+                details: { target_id: id, status },
+                status: 'FAILED',
+                errorMessage: 'Super Admin accounts cannot be deactivated.',
+            });
             return res.status(403).json({
                 success: false,
                 message: 'Super Admin accounts cannot be deactivated.',
@@ -175,6 +250,16 @@ const toggleStatus = async (req, res) => {
         }
 
         const data = await adminUserService.toggleAdminStatus(id, status);
+
+        await recordLog({
+            req,
+            action: 'TOGGLE_STATUS',
+            module: 'ADMINS',
+            description: `${status ? 'Activated' : 'Deactivated'} admin #${id}`,
+            details: { id, status },
+            status: 'SUCCESS',
+        });
+
         return res.status(200).json({
             success: true,
             data,
@@ -182,6 +267,15 @@ const toggleStatus = async (req, res) => {
         });
     } catch (err) {
         console.error('[Admin] Toggle status error:', err.message);
+        await recordLog({
+            req,
+            action: 'TOGGLE_STATUS',
+            module: 'ADMINS',
+            description: `Failed to toggle status for admin #${id}`,
+            details: { id, status },
+            status: 'FAILED',
+            errorMessage: err.message,
+        });
         const statusCode = err.statusCode || 500;
         return res.status(statusCode).json({
             success: false,
@@ -208,6 +302,15 @@ const changePassword = async (req, res) => {
         // Safeguard: Cannot change password of another Super Admin account
         const targetIsSuper = await adminUserService.isSuperAdminAccount(id);
         if (targetIsSuper && !isSelf) {
+            await recordLog({
+                req,
+                action: 'CHANGE_PASSWORD',
+                module: 'ADMINS',
+                description: `Unauthorized attempt to change password of Super Admin #${id}`,
+                details: { target_id: id },
+                status: 'FAILED',
+                errorMessage: 'You cannot change the password of another Super Admin account.',
+            });
             return res.status(403).json({
                 success: false,
                 message: 'You cannot change the password of another Super Admin account.',
@@ -215,6 +318,16 @@ const changePassword = async (req, res) => {
         }
 
         const data = await adminUserService.changeAdminPassword(id, value.password);
+
+        await recordLog({
+            req,
+            action: 'CHANGE_PASSWORD',
+            module: 'ADMINS',
+            description: `Changed password for admin #${id}`,
+            details: { id },
+            status: 'SUCCESS',
+        });
+
         return res.status(200).json({
             success: true,
             data,
@@ -222,6 +335,15 @@ const changePassword = async (req, res) => {
         });
     } catch (err) {
         console.error('[Admin] Change password error:', err.message);
+        await recordLog({
+            req,
+            action: 'CHANGE_PASSWORD',
+            module: 'ADMINS',
+            description: `Failed to change password for admin #${id}`,
+            details: { id },
+            status: 'FAILED',
+            errorMessage: err.message,
+        });
         const statusCode = err.statusCode || 500;
         return res.status(statusCode).json({
             success: false,
@@ -249,6 +371,15 @@ const deleteAdmin = async (req, res) => {
         // Safeguard: Super Admin accounts cannot be deleted
         const targetIsSuper = await adminUserService.isSuperAdminAccount(id);
         if (targetIsSuper) {
+            await recordLog({
+                req,
+                action: 'DELETE_ADMIN',
+                module: 'ADMINS',
+                description: `Attempted to delete Super Admin #${id}`,
+                details: { target_id: id },
+                status: 'FAILED',
+                errorMessage: 'Super Admin accounts cannot be deleted.',
+            });
             return res.status(403).json({
                 success: false,
                 message: 'Super Admin accounts cannot be deleted.',
@@ -256,12 +387,31 @@ const deleteAdmin = async (req, res) => {
         }
 
         await adminUserService.deleteAdmin(id);
+
+        await recordLog({
+            req,
+            action: 'DELETE_ADMIN',
+            module: 'ADMINS',
+            description: `Deleted admin #${id}`,
+            details: { id },
+            status: 'SUCCESS',
+        });
+
         return res.status(200).json({
             success: true,
             message: 'Admin deleted successfully.',
         });
     } catch (err) {
         console.error('[Admin] Delete error:', err.message);
+        await recordLog({
+            req,
+            action: 'DELETE_ADMIN',
+            module: 'ADMINS',
+            description: `Failed to delete admin #${id}`,
+            details: { id },
+            status: 'FAILED',
+            errorMessage: err.message,
+        });
         const statusCode = err.statusCode || 500;
         return res.status(statusCode).json({
             success: false,
