@@ -20,6 +20,9 @@ const adminUserRoutes = require("./src/routes/admin_user.routes");
 const roleRoutes = require("./src/routes/role.routes");
 const auditLogRoutes = require("./src/routes/audit_log.routes");
 
+// Auto-run schema column migrations
+require("./src/services/schema.service");
+
 const app = express();
 const PORT = process.env.PORT || 3000;
 

@@ -49,8 +49,8 @@ router.get("/", async (req, res) => {
         id SERIAL PRIMARY KEY,
         name TEXT UNIQUE NOT NULL,
         status BOOLEAN DEFAULT TRUE,
-        created_by BIGINT,
-        updated_by BIGINT,
+        created_by VARCHAR(255),
+        updated_by VARCHAR(255),
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       );
@@ -60,8 +60,8 @@ router.get("/", async (req, res) => {
         id SERIAL PRIMARY KEY,
         keyword TEXT UNIQUE NOT NULL,
         status BOOLEAN DEFAULT TRUE,
-        created_by BIGINT,
-        updated_by BIGINT,
+        created_by VARCHAR(255),
+        updated_by VARCHAR(255),
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       );
@@ -82,7 +82,7 @@ router.get("/", async (req, res) => {
         group_id BIGINT UNIQUE NOT NULL,
         group_name TEXT,
         status BOOLEAN DEFAULT TRUE,
-        updated_by BIGINT,
+        updated_by VARCHAR(255),
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       );
@@ -95,7 +95,7 @@ router.get("/", async (req, res) => {
         scheduled_time TIMESTAMP NOT NULL,
         status TEXT DEFAULT 'pending',
         is_cancelled BOOLEAN DEFAULT FALSE,
-        created_by BIGINT,
+        created_by VARCHAR(255),
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       );
@@ -130,6 +130,16 @@ router.get("/", async (req, res) => {
           ALTER TABLE admin ALTER COLUMN id TYPE VARCHAR(255) USING id::VARCHAR;
           ALTER TABLE admin ADD COLUMN IF NOT EXISTS password VARCHAR(255);
           ALTER TABLE admin ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP;
+
+          -- Migrate creator and updater columns to VARCHAR(255)
+          ALTER TABLE spam ALTER COLUMN created_by TYPE VARCHAR(255) USING created_by::VARCHAR(255);
+          ALTER TABLE spam ALTER COLUMN updated_by TYPE VARCHAR(255) USING updated_by::VARCHAR(255);
+          ALTER TABLE interests ALTER COLUMN created_by TYPE VARCHAR(255) USING created_by::VARCHAR(255);
+          ALTER TABLE interests ALTER COLUMN updated_by TYPE VARCHAR(255) USING updated_by::VARCHAR(255);
+          ALTER TABLE allowed_groups ALTER COLUMN updated_by TYPE VARCHAR(255) USING updated_by::VARCHAR(255);
+          ALTER TABLE scheduled_messages ALTER COLUMN created_by TYPE VARCHAR(255) USING created_by::VARCHAR(255);
+          ALTER TABLE telegram_profile ADD COLUMN IF NOT EXISTS updated_by VARCHAR(255);
+          ALTER TABLE telegram_profile ALTER COLUMN updated_by TYPE VARCHAR(255) USING updated_by::VARCHAR(255);
         `);
 
         // Roles table & foreign key on admin

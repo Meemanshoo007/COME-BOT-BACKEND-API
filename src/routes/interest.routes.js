@@ -5,14 +5,14 @@ const {
     toggleStatus,
     bulkToggleStatus,
 } = require('../controllers/interest.controller');
-const authMiddleware = require('../middleware/auth');
+const { authMiddleware, requirePermission } = require('../middleware/auth');
 
 const router = express.Router();
 
 router.use(authMiddleware);
-router.get('/', listInterests);
-router.post('/', createInterest);
-router.patch('/:id/status', toggleStatus);
-router.post('/bulk-status', bulkToggleStatus);
+router.get('/', requirePermission('interests.view'), listInterests);
+router.post('/', requirePermission('interests.manage'), createInterest);
+router.patch('/:id/status', requirePermission('interests.manage'), toggleStatus);
+router.post('/bulk-status', requirePermission('interests.manage'), bulkToggleStatus);
 
 module.exports = router;

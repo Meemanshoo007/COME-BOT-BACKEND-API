@@ -1,6 +1,5 @@
 const pool = require('../config/db');
 
-/** Get all allowed groups with creator/updater resolution */
 const getAllGroups = async () => {
     const result = await pool.query(`
         SELECT 
@@ -11,9 +10,10 @@ const getAllGroups = async () => {
             g.created_at, 
             g.updated_at,
             g.updated_by,
-            p2.name as updater_name
+            COALESCE(a.id, p2.name, g.updated_by) as updater_name
         FROM allowed_groups g
-        LEFT JOIN telegram_profile p2 ON g.updated_by = p2.telegram_id
+        LEFT JOIN admin a ON a.id::TEXT = g.updated_by::TEXT
+        LEFT JOIN telegram_profile p2 ON g.updated_by::TEXT = p2.telegram_id::TEXT
         ORDER BY g.created_at DESC
     `);
     return result.rows;
