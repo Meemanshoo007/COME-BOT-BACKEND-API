@@ -182,19 +182,19 @@ const getAuditLogs = async ({
 
     if (admin_id && admin_id.trim() !== '' && admin_id !== 'all') {
         params.push(admin_id.trim());
-        conditions.push(`l.admin_id = $${paramIndex}`);
+        conditions.push(`TRIM(l.admin_id) = $${paramIndex}`);
         paramIndex++;
     }
 
     if (filterModule && filterModule.trim() !== '' && filterModule !== 'all') {
         params.push(filterModule.trim().toUpperCase());
-        conditions.push(`UPPER(l.module) = $${paramIndex}`);
+        conditions.push(`UPPER(TRIM(l.module)) = $${paramIndex}`);
         paramIndex++;
     }
 
     if (status && status.trim() !== '' && status !== 'all') {
         params.push(status.trim().toUpperCase());
-        conditions.push(`UPPER(l.status) = $${paramIndex}`);
+        conditions.push(`UPPER(TRIM(l.status)) = $${paramIndex}`);
         paramIndex++;
     }
 
@@ -244,14 +244,22 @@ const getAuditLogs = async ({
     const dataResult = await pool.query(dataQuery, [...params, cleanLimit, offset]);
 
     // Distinct modules and admins for filter UI options
-    const modulesRes = await pool.query(`SELECT DISTINCT module FROM audit_logs WHERE module IS NOT NULL ORDER BY module ASC`);
+    const modulesRes = await pool.query(`
+        SELECT DISTINCT UPPER(TRIM(module)) AS module 
+        FROM audit_logs 
+        WHERE module IS NOT NULL AND TRIM(module) != '' 
+        ORDER BY UPPER(TRIM(module)) ASC
+    `);
     const distinctModules = modulesRes.rows.map(r => r.module).filter(Boolean);
 
     const adminsRes = await pool.query(`
-        SELECT DISTINCT admin_id, admin_name 
+        SELECT 
+            TRIM(admin_id) AS admin_id, 
+            COALESCE(MAX(NULLIF(TRIM(admin_name), '')), TRIM(admin_id)) AS admin_name 
         FROM audit_logs 
-        WHERE admin_id IS NOT NULL AND admin_id != '' 
-        ORDER BY admin_id ASC
+        WHERE admin_id IS NOT NULL AND TRIM(admin_id) != '' 
+        GROUP BY TRIM(admin_id) 
+        ORDER BY TRIM(admin_id) ASC
     `);
 
     return {
@@ -303,19 +311,19 @@ const getLatestLogs = async ({
 
     if (admin_id && admin_id.trim() !== '' && admin_id !== 'all') {
         params.push(admin_id.trim());
-        conditions.push(`l.admin_id = $${paramIndex}`);
+        conditions.push(`TRIM(l.admin_id) = $${paramIndex}`);
         paramIndex++;
     }
 
     if (filterModule && filterModule.trim() !== '' && filterModule !== 'all') {
         params.push(filterModule.trim().toUpperCase());
-        conditions.push(`UPPER(l.module) = $${paramIndex}`);
+        conditions.push(`UPPER(TRIM(l.module)) = $${paramIndex}`);
         paramIndex++;
     }
 
     if (status && status.trim() !== '' && status !== 'all') {
         params.push(status.trim().toUpperCase());
-        conditions.push(`UPPER(l.status) = $${paramIndex}`);
+        conditions.push(`UPPER(TRIM(l.status)) = $${paramIndex}`);
         paramIndex++;
     }
 
@@ -402,19 +410,19 @@ const clearAuditLogs = async ({
 
     if (admin_id && admin_id.trim() !== '' && admin_id !== 'all') {
         params.push(admin_id.trim());
-        conditions.push(`admin_id = $${paramIndex}`);
+        conditions.push(`TRIM(admin_id) = $${paramIndex}`);
         paramIndex++;
     }
 
     if (filterModule && filterModule.trim() !== '' && filterModule !== 'all') {
         params.push(filterModule.trim().toUpperCase());
-        conditions.push(`UPPER(module) = $${paramIndex}`);
+        conditions.push(`UPPER(TRIM(module)) = $${paramIndex}`);
         paramIndex++;
     }
 
     if (status && status.trim() !== '' && status !== 'all') {
         params.push(status.trim().toUpperCase());
-        conditions.push(`UPPER(status) = $${paramIndex}`);
+        conditions.push(`UPPER(TRIM(status)) = $${paramIndex}`);
         paramIndex++;
     }
 
