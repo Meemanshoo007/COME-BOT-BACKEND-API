@@ -34,6 +34,21 @@ const createAdmin = async (req, res) => {
 
     try {
         value.id = String(value.id).trim();
+
+        // Privilege check: only Super Admins can create admins with the Super Admin role
+        if (value.role_id !== undefined && value.role_id !== null) {
+            const roleIsSuper = await adminUserService.isSuperAdminRole(value.role_id);
+            if (roleIsSuper) {
+                const callerIsSuper = await adminUserService.isSuperAdminAccount(req.admin?.id);
+                if (!callerIsSuper) {
+                    return res.status(403).json({
+                        success: false,
+                        message: 'Only Super Admins can create an admin with the Super Admin role.',
+                    });
+                }
+            }
+        }
+
         const data = await adminUserService.createAdmin(value);
         return res.status(201).json({
             success: true,
@@ -65,8 +80,11 @@ const updateAdmin = async (req, res) => {
         value.newId = String(value.newId).trim();
     }
 
+    const callerId = String(req.admin?.id || '').trim();
+    const isSelf = callerId === id;
+
     // Safeguard: cannot deactivate self
-    if (String(req.admin?.id) === String(id) && value.status === false) {
+    if (isSelf && value.status === false) {
         return res.status(400).json({
             success: false,
             message: 'You cannot deactivate your own admin account.',
@@ -74,6 +92,40 @@ const updateAdmin = async (req, res) => {
     }
 
     try {
+        // Safeguard: Super Admin accounts cannot be modified by another admin
+        const targetIsSuper = await adminUserService.isSuperAdminAccount(id);
+        if (targetIsSuper && !isSelf) {
+            return res.status(403).json({
+                success: false,
+                message: 'Super Admin accounts cannot be modified by another admin.',
+            });
+        }
+
+        // If target is Super Admin and isSelf: cannot demote own account from Super Admin
+        if (targetIsSuper && isSelf && value.role_id !== undefined && value.role_id !== null) {
+            const newRoleIsSuper = await adminUserService.isSuperAdminRole(value.role_id);
+            if (!newRoleIsSuper) {
+                return res.status(403).json({
+                    success: false,
+                    message: 'You cannot remove or demote the Super Admin role from your own account.',
+                });
+            }
+        }
+
+        // If assigning a Super Admin role to someone, caller must be a Super Admin
+        if (value.role_id !== undefined && value.role_id !== null) {
+            const newRoleIsSuper = await adminUserService.isSuperAdminRole(value.role_id);
+            if (newRoleIsSuper) {
+                const callerIsSuper = await adminUserService.isSuperAdminAccount(callerId);
+                if (!callerIsSuper) {
+                    return res.status(403).json({
+                        success: false,
+                        message: 'Only Super Admins can assign the Super Admin role.',
+                    });
+                }
+            }
+        }
+
         const data = await adminUserService.updateAdmin(id, value);
         return res.status(200).json({
             success: true,
@@ -101,8 +153,11 @@ const toggleStatus = async (req, res) => {
         return res.status(400).json({ success: false, message: 'Status must be a boolean.' });
     }
 
+    const callerId = String(req.admin?.id || '').trim();
+    const isSelf = callerId === id;
+
     // Safeguard: cannot deactivate self
-    if (String(req.admin?.id) === String(id) && status === false) {
+    if (isSelf && status === false) {
         return res.status(400).json({
             success: false,
             message: 'You cannot deactivate your own admin account.',
@@ -110,6 +165,15 @@ const toggleStatus = async (req, res) => {
     }
 
     try {
+        // Safeguard: Super Admin accounts cannot be deactivated
+        const targetIsSuper = await adminUserService.isSuperAdminAccount(id);
+        if (targetIsSuper) {
+            return res.status(403).json({
+                success: false,
+                message: 'Super Admin accounts cannot be deactivated.',
+            });
+        }
+
         const data = await adminUserService.toggleAdminStatus(id, status);
         return res.status(200).json({
             success: true,
@@ -137,7 +201,19 @@ const changePassword = async (req, res) => {
         return res.status(400).json({ success: false, message: error.details[0].message });
     }
 
+    const callerId = String(req.admin?.id || '').trim();
+    const isSelf = callerId === id;
+
     try {
+        // Safeguard: Cannot change password of another Super Admin account
+        const targetIsSuper = await adminUserService.isSuperAdminAccount(id);
+        if (targetIsSuper && !isSelf) {
+            return res.status(403).json({
+                success: false,
+                message: 'You cannot change the password of another Super Admin account.',
+            });
+        }
+
         const data = await adminUserService.changeAdminPassword(id, value.password);
         return res.status(200).json({
             success: true,
@@ -160,8 +236,9 @@ const deleteAdmin = async (req, res) => {
         return res.status(400).json({ success: false, message: 'Invalid admin ID.' });
     }
 
+    const callerId = String(req.admin?.id || '').trim();
     // Safeguard: cannot delete self
-    if (String(req.admin?.id) === String(id)) {
+    if (callerId === id) {
         return res.status(400).json({
             success: false,
             message: 'You cannot delete your own admin account.',
@@ -169,6 +246,15 @@ const deleteAdmin = async (req, res) => {
     }
 
     try {
+        // Safeguard: Super Admin accounts cannot be deleted
+        const targetIsSuper = await adminUserService.isSuperAdminAccount(id);
+        if (targetIsSuper) {
+            return res.status(403).json({
+                success: false,
+                message: 'Super Admin accounts cannot be deleted.',
+            });
+        }
+
         await adminUserService.deleteAdmin(id);
         return res.status(200).json({
             success: true,

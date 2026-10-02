@@ -246,6 +246,40 @@ const deleteAdmin = async (id) => {
     return result.rows[0];
 };
 
+/**
+ * Check if a given admin ID belongs to a Super Admin account.
+ * (e.g. role_id is NULL, or role is system, or role name contains 'super')
+ */
+const isSuperAdminAccount = async (adminId) => {
+    if (!adminId) return false;
+    await ensureSchema();
+    const cleanId = String(adminId).trim();
+    const res = await pool.query(`
+        SELECT a.id, a.role_id, r.name AS role_name, r.is_system
+        FROM admin a
+        LEFT JOIN roles r ON r.id = a.role_id
+        WHERE a.id::TEXT = $1
+    `, [cleanId]);
+    if (res.rows.length === 0) return false;
+    const row = res.rows[0];
+    if (row.role_id === null) return true;
+    if (row.is_system === true) return true;
+    if (row.role_name && row.role_name.toLowerCase().includes('super')) return true;
+    return false;
+};
+
+/**
+ * Check if a role ID corresponds to a Super Admin role.
+ */
+const isSuperAdminRole = async (roleId) => {
+    if (roleId === undefined || roleId === null) return true;
+    await ensureSchema();
+    const res = await pool.query('SELECT name, is_system FROM roles WHERE id = $1', [roleId]);
+    if (res.rows.length === 0) return false;
+    const r = res.rows[0];
+    return r.is_system === true || (r.name && r.name.toLowerCase().includes('super'));
+};
+
 module.exports = {
     listAdmins,
     createAdmin,
@@ -253,4 +287,6 @@ module.exports = {
     toggleAdminStatus,
     changeAdminPassword,
     deleteAdmin,
+    isSuperAdminAccount,
+    isSuperAdminRole,
 };
