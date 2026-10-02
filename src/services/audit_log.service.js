@@ -262,6 +262,14 @@ const getAuditLogs = async ({
         ORDER BY TRIM(admin_id) ASC
     `);
 
+    // Date counts for distribution / calendar breakdown
+    const dateCountsData = await getDateCounts({
+        search,
+        admin_id,
+        module: filterModule,
+        status,
+    });
+
     return {
         logs: dataResult.rows,
         total,
@@ -270,6 +278,74 @@ const getAuditLogs = async ({
         totalPages: Math.ceil(total / cleanLimit) || 1,
         modules: distinctModules,
         admins: adminsRes.rows,
+        date_counts: dateCountsData.daily || [],
+    };
+};
+
+/**
+ * Retrieve daily log counts according to non-date filters (search, admin_id, module, status).
+ */
+const getDateCounts = async ({
+    search = '',
+    admin_id,
+    module: filterModule,
+    status,
+} = {}) => {
+    await ensureSchema();
+
+    const conditions = [];
+    const params = [];
+    let paramIndex = 1;
+
+    if (search && search.trim() !== '') {
+        const s = `%${search.trim()}%`;
+        params.push(s);
+        conditions.push(`(
+            l.admin_id ILIKE $${paramIndex} OR 
+            COALESCE(l.admin_name, '') ILIKE $${paramIndex} OR 
+            l.action ILIKE $${paramIndex} OR 
+            l.module ILIKE $${paramIndex} OR 
+            l.description ILIKE $${paramIndex} OR
+            COALESCE(l.error_message, '') ILIKE $${paramIndex}
+        )`);
+        paramIndex++;
+    }
+
+    if (admin_id && admin_id.trim() !== '' && admin_id !== 'all') {
+        params.push(admin_id.trim());
+        conditions.push(`TRIM(l.admin_id) = $${paramIndex}`);
+        paramIndex++;
+    }
+
+    if (filterModule && filterModule.trim() !== '' && filterModule !== 'all') {
+        params.push(filterModule.trim().toUpperCase());
+        conditions.push(`UPPER(TRIM(l.module)) = $${paramIndex}`);
+        paramIndex++;
+    }
+
+    if (status && status.trim() !== '' && status !== 'all') {
+        params.push(status.trim().toUpperCase());
+        conditions.push(`UPPER(TRIM(l.status)) = $${paramIndex}`);
+        paramIndex++;
+    }
+
+    const whereClause = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : '';
+
+    const dailyQuery = `
+        SELECT 
+            TO_CHAR(l.created_at, 'YYYY-MM-DD') AS date,
+            COUNT(*)::INT AS count
+        FROM audit_logs l
+        ${whereClause}
+        GROUP BY TO_CHAR(l.created_at, 'YYYY-MM-DD')
+        ORDER BY date DESC
+        LIMIT 90
+    `;
+
+    const dailyRes = await pool.query(dailyQuery, params);
+
+    return {
+        daily: dailyRes.rows,
     };
 };
 
@@ -455,6 +531,7 @@ module.exports = {
     recordLog,
     getAuditLogs,
     getLatestLogs,
+    getDateCounts,
     clearAuditLogs,
     auditEmitter,
     ensureSchema,

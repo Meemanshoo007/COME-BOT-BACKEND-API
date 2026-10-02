@@ -45,6 +45,8 @@ const getLatestAuditLogs = async (req, res) => {
             module: filterModule,
             status,
             search = '',
+            start_date,
+            end_date,
         } = req.query;
 
         const data = await auditLogService.getLatestLogs({
@@ -53,6 +55,8 @@ const getLatestAuditLogs = async (req, res) => {
             module: filterModule,
             status,
             search,
+            start_date,
+            end_date,
         });
 
         return res.status(200).json({
@@ -64,6 +68,35 @@ const getLatestAuditLogs = async (req, res) => {
         return res.status(500).json({
             success: false,
             message: 'Failed to fetch latest audit logs.',
+        });
+    }
+};
+
+const getDateCounts = async (req, res) => {
+    try {
+        const {
+            search = '',
+            admin_id,
+            module: filterModule,
+            status,
+        } = req.query;
+
+        const data = await auditLogService.getDateCounts({
+            search,
+            admin_id,
+            module: filterModule,
+            status,
+        });
+
+        return res.status(200).json({
+            success: true,
+            data,
+        });
+    } catch (err) {
+        console.error('[Audit Log] getDateCounts error:', err.message);
+        return res.status(500).json({
+            success: false,
+            message: 'Failed to retrieve date counts.',
         });
     }
 };
@@ -154,6 +187,7 @@ const clearAuditLogs = async (req, res) => {
 module.exports = {
     listAuditLogs,
     getLatestAuditLogs,
+    getDateCounts,
     streamAuditLogs,
     clearAuditLogs,
 };
