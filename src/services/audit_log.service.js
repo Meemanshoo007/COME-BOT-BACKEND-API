@@ -1,4 +1,8 @@
 const pool = require('../config/db');
+const EventEmitter = require('events');
+
+const auditEmitter = new EventEmitter();
+auditEmitter.setMaxListeners(100);
 
 let schemaMigrated = false;
 
@@ -99,10 +103,11 @@ const recordLog = async ({
             : null;
         const userAgent = req?.headers ? (req.headers['user-agent'] || null) : null;
 
-        await pool.query(`
+        const insertRes = await pool.query(`
             INSERT INTO audit_logs (
                 admin_id, admin_name, action, module, description, details, status, error_message, ip_address, user_agent, created_at
             ) VALUES ($1, $2, $3, $4, $5, $6::jsonb, $7, $8, $9, $10, NOW())
+            RETURNING id, created_at
         `, [
             callerId,
             callerName,
@@ -115,6 +120,24 @@ const recordLog = async ({
             ip,
             userAgent,
         ]);
+
+        if (insertRes.rows.length > 0) {
+            const row = insertRes.rows[0];
+            auditEmitter.emit('new_log', {
+                id: row.id,
+                admin_id: callerId,
+                admin_name: callerName,
+                action,
+                module: targetModule,
+                description,
+                details: sanitizedDetails,
+                status: status.toUpperCase(),
+                error_message: errorMessage,
+                ip_address: ip,
+                user_agent: userAgent,
+                created_at: row.created_at,
+            });
+        }
     } catch (e) {
         console.error('[Audit Log] Failed to record log entry:', e.message);
     }
@@ -236,8 +259,93 @@ const getAuditLogs = async ({
     };
 };
 
+/**
+ * Fetch logs created strictly after a specific log ID (for real-time live sync).
+ */
+const getLatestLogs = async ({
+    after_id,
+    admin_id,
+    module: filterModule,
+    status,
+    search = '',
+} = {}) => {
+    await ensureSchema();
+    const cleanAfterId = parseInt(after_id, 10);
+    if (isNaN(cleanAfterId) || cleanAfterId < 0) {
+        return { logs: [], total: 0 };
+    }
+
+    const conditions = ['l.id > $1'];
+    const params = [cleanAfterId];
+    let paramIndex = 2;
+
+    if (search && search.trim() !== '') {
+        const s = `%${search.trim()}%`;
+        params.push(s);
+        conditions.push(`(
+            l.admin_id ILIKE $${paramIndex} OR 
+            COALESCE(l.admin_name, '') ILIKE $${paramIndex} OR 
+            l.action ILIKE $${paramIndex} OR 
+            l.module ILIKE $${paramIndex} OR 
+            l.description ILIKE $${paramIndex} OR
+            COALESCE(l.error_message, '') ILIKE $${paramIndex}
+        )`);
+        paramIndex++;
+    }
+
+    if (admin_id && admin_id.trim() !== '' && admin_id !== 'all') {
+        params.push(admin_id.trim());
+        conditions.push(`l.admin_id = $${paramIndex}`);
+        paramIndex++;
+    }
+
+    if (filterModule && filterModule.trim() !== '' && filterModule !== 'all') {
+        params.push(filterModule.trim().toUpperCase());
+        conditions.push(`UPPER(l.module) = $${paramIndex}`);
+        paramIndex++;
+    }
+
+    if (status && status.trim() !== '' && status !== 'all') {
+        params.push(status.trim().toUpperCase());
+        conditions.push(`UPPER(l.status) = $${paramIndex}`);
+        paramIndex++;
+    }
+
+    const whereClause = `WHERE ${conditions.join(' AND ')}`;
+    const dataQuery = `
+        SELECT 
+            l.id,
+            l.admin_id,
+            l.admin_name,
+            l.action,
+            l.module,
+            l.description,
+            l.details,
+            l.status,
+            l.error_message,
+            l.ip_address,
+            l.user_agent,
+            l.created_at
+        FROM audit_logs l
+        ${whereClause}
+        ORDER BY l.id ASC
+        LIMIT 50
+    `;
+    const dataResult = await pool.query(dataQuery, params);
+
+    const countResult = await pool.query(`SELECT COUNT(*)::INT AS total FROM audit_logs`);
+    const total = countResult.rows[0]?.total || 0;
+
+    return {
+        logs: dataResult.rows,
+        total,
+    };
+};
+
 module.exports = {
     recordLog,
     getAuditLogs,
+    getLatestLogs,
+    auditEmitter,
     ensureSchema,
 };
